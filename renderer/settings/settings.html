@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Settings</title>
+  <link rel="stylesheet" href="settings.css" />
+</head>
+<body>
+  <div id="wrap">
+    <h1>🌸 Desktop Pet Settings</h1>
+
+    <section>
+      <label class="row">
+        <span>Enable pet</span>
+        <input type="checkbox" id="enabled" />
+      </label>
+    </section>
+
+    <section>
+      <h2>Visits</h2>
+      <label class="row">
+        <span>Visit frequency</span>
+        <select id="visitFrequencyMinutes">
+          <option value="5">Every 5 minutes</option>
+          <option value="10">Every 10 minutes</option>
+          <option value="15">Every 15 minutes</option>
+          <option value="30">Every 30 minutes</option>
+          <option value="60">Every 1 hour</option>
+          <option value="custom">Custom...</option>
+        </select>
+      </label>
+      <label class="row" id="customVisitRow" style="display:none;">
+        <span>Custom minutes</span>
+        <input type="number" id="visitFrequencyCustomMinutes" min="1" max="480" />
+      </label>
+      <label class="row">
+        <span>Check-ins (greeting/mood)</span>
+        <input type="checkbox" id="checkInsEnabled" />
+      </label>
+    </section>
+
+    <section>
+      <h2>Water reminders</h2>
+      <label class="row">
+        <span>Remind me every</span>
+        <div class="inline">
+          <input type="number" id="waterReminderMinutes" min="5" max="480" style="width:70px" />
+          <span>minutes</span>
+        </div>
+      </label>
+    </section>
+
+    <section>
+      <h2>Appearance &amp; sound</h2>
+      <label class="row">
+        <span>Pet size</span>
+        <select id="petSize">
+          <option value="small">Small</option>
+          <option value="medium">Medium</option>
+          <option value="large">Large</option>
+        </select>
+      </label>
+      <label class="row">
+        <span>Animation speed</span>
+        <div class="inline">
+          <input type="range" id="animationSpeedMultiplier" min="0.5" max="1.8" step="0.1" />
+          <span id="speedLabel">1.0x</span>
+        </div>
+      </label>
+      <label class="row">
+        <span>Sound</span>
+        <input type="checkbox" id="soundEnabled" />
+      </label>
+    </section>
+
+    <section>
+      <h2>Chat</h2>
+      <label class="row">
+        <span>AI chat mode</span>
+        <input type="checkbox" id="aiChatEnabled" />
+      </label>
+      <p class="hint">Off = built-in offline replies. On = uses OpenAI with the key below.</p>
+      <label class="row">
+        <span>OpenAI API key</span>
+        <div class="inline">
+          <input type="password" id="apiKeyInput" placeholder="sk-..." style="flex:1" />
+        </div>
+      </label>
+      <div class="inline" style="margin-top:6px; justify-content:flex-end; gap:8px;">
+        <span id="apiKeyStatus" class="hint"></span>
+        <button id="clearKeyBtn" class="btn-secondary">Remove</button>
+        <button id="saveKeyBtn" class="btn-primary">Save key</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Quiet hours</h2>
+      <label class="row">
+        <span>Enable quiet hours</span>
+        <input type="checkbox" id="quietHoursEnabled" />
+      </label>
+      <label class="row">
+        <span>From</span>
+        <input type="time" id="quietHoursStart" />
+      </label>
+      <label class="row">
+        <span>To</span>
+        <input type="time" id="quietHoursEnd" />
+      </label>
+    </section>
+
+    <section>
+      <h2>System</h2>
+      <label class="row">
+        <span>Launch when computer starts</span>
+        <input type="checkbox" id="launchAtStartup" />
+      </label>
+      <label class="row">
+        <span>Always on top</span>
+        <input type="checkbox" id="alwaysOnTop" />
+      </label>
+    </section>
+
+    <div id="savedToast" class="hidden">Saved ✓</div>
+  </div>
+  <script src="settings.js"></script>
+</body>
+</html>

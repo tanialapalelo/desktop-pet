@@ -1,0 +1,17 @@
+{
+  "name": "desktop-pet",
+  "productName": "Desktop Pet",
+  "version": "1.0.0",
+  "description": "A tiny animated desktop companion that lives on your screen.",
+  "main": "main.js",
+  "private": true,
+  "author": "You",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "postinstall": "node -e \"console.log('\\n✔ Setup complete. Run npm start (or double-click the launcher) to open your pet.\\n')\""
+  },
+  "devDependencies": {
+    "electron": "^33.2.0"
+  }
+}

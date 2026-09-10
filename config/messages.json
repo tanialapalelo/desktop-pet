@@ -1,0 +1,69 @@
+{
+  "_comment": "Edit the lists below to change what the pet says. One message is picked at random each time. No code changes needed.",
+
+  "visitCategories": {
+    "greeting": [
+      "Hi, how are you doing?",
+      "Hi, checking in.",
+      "Hi, still doing okay?",
+      "Hey there!",
+      "Just saying hi."
+    ],
+    "water": [
+      "Hi, want some water?",
+      "Hi, water check.",
+      "Staying hydrated?",
+      "Sip of water?"
+    ],
+    "stretch": [
+      "Hi, quick stretch?",
+      "Stretch break?",
+      "Shoulders could use a roll.",
+      "Stand up and stretch a sec?"
+    ],
+    "break": [
+      "Hi, need a break?",
+      "Maybe a short break?",
+      "You've been at it a while.",
+      "Break time?"
+    ],
+    "mood": [
+      "Hi, checking in — okay?",
+      "How's it going over there?",
+      "Mood check!",
+      "All good?"
+    ]
+  },
+
+  "visitCategoryWeights": {
+    "greeting": 3,
+    "mood": 2,
+    "break": 2,
+    "stretch": 2,
+    "water": 1
+  },
+
+  "basicChat": {
+    "patterns": [
+      { "match": ["hi", "hello", "hey", "yo", "sup", "hiya"], "category": "greeting" },
+      { "match": ["nice to meet you", "nice meeting you"], "category": "niceToMeet" },
+      { "match": ["how are you", "how r u", "hru", "how you doing"], "category": "howAreYou" },
+      { "match": ["i'm tired", "im tired", "so tired", "exhausted", "sleepy"], "category": "tired" },
+      { "match": ["i need water", "need water", "thirsty", "water"], "category": "water" },
+      { "match": ["stressed", "anxious", "overwhelmed", "i'm stressed"], "category": "stressed" },
+      { "match": ["bye", "goodbye", "see you", "gtg"], "category": "bye" },
+      { "match": ["thanks", "thank you", "ty"], "category": "thanks" }
+    ],
+    "responses": {
+      "greeting": ["Hi there! Good to see you.", "Hey! I'm here.", "Hello! What's up?"],
+      "niceToMeet": ["Nice to meet you too! I'm happy to be your desk buddy.", "Likewise! I'll be around if you need me."],
+      "howAreYou": ["I'm just a tiny pixel, but doing great! How about you?", "Living my best pixelated life. You?"],
+      "tired": ["Aw. Maybe a short break would help — I'll be right here.", "Sounds like it's time to rest your eyes for a bit."],
+      "water": ["Good call, go grab some water. I'll wait!", "Hydration first! Go on, I'm not going anywhere."],
+      "stressed": ["Take a slow breath with me for a sec. You've got this.", "That sounds heavy. One small step at a time, okay?"],
+      "bye": ["Bye for now! I'll be right here if you need me.", "See you soon!"],
+      "thanks": ["Anytime!", "That's what I'm here for."],
+      "fallback": ["I hear you.", "Mm, tell me more.", "I'm listening.", "Got it."]
+    }
+  }
+}
