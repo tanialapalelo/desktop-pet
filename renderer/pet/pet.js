@@ -95,11 +95,14 @@ window.api.pet.onCommand((cmd) => {
     stage.classList.toggle('side-right', !isLeft);
     // Anchor the bubble directly off the pet's own width instead of letting
     // flexbox distribute the space, that was silently collapsing this box.
+    // Gap comes from main.js per-visit (randomized there), falling back to
+    // the init-time default if this particular command didn't include one.
+    const gap = cmd.gap || bubbleGap;
     if (isLeft) {
-      bubble.style.right = (petFigureWidth + bubbleGap) + 'px';
+      bubble.style.right = (petFigureWidth + gap) + 'px';
       bubble.style.left = 'auto';
     } else {
-      bubble.style.left = (petFigureWidth + bubbleGap) + 'px';
+      bubble.style.left = (petFigureWidth + gap) + 'px';
       bubble.style.right = 'auto';
     }
     bubbleText.textContent = cmd.text;

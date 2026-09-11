@@ -305,11 +305,11 @@ function walkDurationFor(distance) {
   return clamp(ms, 450, 1700);
 }
 
-function bubbleSideAndBounds(wa, restX, windowWidth, windowHeight) {
-  const fitsRight = restX + windowWidth + BUBBLE_GAP + BUBBLE_WIDTH + 16 <= wa.x + wa.width;
+function bubbleSideAndBounds(wa, restX, windowWidth, windowHeight, gap) {
+  const fitsRight = restX + windowWidth + gap + BUBBLE_WIDTH + 16 <= wa.x + wa.width;
   const side = fitsRight ? 'right' : 'left';
-  const grownWidth = windowWidth + BUBBLE_GAP + BUBBLE_WIDTH;
-  let x = side === 'right' ? restX : restX - (BUBBLE_GAP + BUBBLE_WIDTH);
+  const grownWidth = windowWidth + gap + BUBBLE_WIDTH;
+  let x = side === 'right' ? restX : restX - (gap + BUBBLE_WIDTH);
 
   // Clamp so the widened window always stays fully inside this monitor's
   // work area. Without this, on a narrow/secondary monitor (or with the pet
@@ -385,9 +385,12 @@ async function runVisit(kind) {
       if (showBubble) {
         const text = pickVisitMessage(category);
         state.currentBubbleText = text;
-        const { side, bounds } = bubbleSideAndBounds(wa, restX, dims.windowWidth, dims.windowHeight);
+        // Vary the gap each time so the bubble doesn't always sit pinned at
+        // the exact same distance from the pet.
+        const gap = Math.round(randomBetween(BUBBLE_GAP, BUBBLE_GAP + 22));
+        const { side, bounds } = bubbleSideAndBounds(wa, restX, dims.windowWidth, dims.windowHeight, gap);
 
-        win.webContents.send('pet:command', { type: 'bubble-show', text, side });
+        win.webContents.send('pet:command', { type: 'bubble-show', text, side, gap });
         // Animate the widen-for-bubble bounds change in step with the CSS
         // fade-in (0.22s, see #bubble.visible in pet.css) instead of
         // snapping instantly, which made the character visibly hop sideways.

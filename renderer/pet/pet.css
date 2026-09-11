@@ -44,19 +44,20 @@ html, body {
 }
 
 /* Blink overlay: two small skin-tone ellipses placed over the eyes.
-   Coordinates were sampled from the actual sprite (see build notes in README). */
+   Coordinates sampled from assets/sprites/cat/idle.png (see
+   scripts/extract_cat_sprites.py for how that canvas is built). */
 .eye-blink {
   position: absolute;
-  top: 32%;
-  height: 12%;
+  top: 35%;
+  height: 8%;
   border-radius: 50%;
-  background: rgb(255, 250, 244);
+  background: #fff;
   opacity: 0;
   pointer-events: none;
   transform: scaleX(var(--dir, 1));
 }
-#eye-left { left: 21%; width: 21%; }
-#eye-right { left: 56%; width: 25%; }
+#eye-left { left: 32%; width: 9%; }
+#eye-right { left: 59%; width: 9%; }
 
 .eye-blink.blinking {
   animation: blinkFlash 0.16s ease-in-out;
@@ -114,11 +115,15 @@ html, body {
   position: absolute;
   top: 6px;
   width: 210px;
-  background: #fff;
-  border: 2px solid #f2a6c4;
+  background: #fffaf0;
+  border: 2px solid #d9c39c;
   border-radius: 16px;
   padding: 10px 14px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  /* drop-shadow (not box-shadow) so the shadow follows the bubble's full
+     rendered silhouette, tail included, instead of stopping abruptly at the
+     bubble's own rectangle and leaving a visible seam where the pointer
+     child sticks out below it. */
+  filter: drop-shadow(0 4px 10px rgba(80, 58, 22, 0.2));
   opacity: 0;
   transform: scale(0.85) translateY(6px);
   transition: opacity 0.22s ease, transform 0.22s ease;
@@ -134,7 +139,7 @@ html, body {
   font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   font-size: 13.5px;
   line-height: 1.35;
-  color: #6b3450;
+  color: #6b4a2b;
   font-weight: 500;
   white-space: pre-wrap;
   overflow-wrap: break-word;
@@ -145,16 +150,16 @@ html, body {
   bottom: -1px;
   width: 14px;
   height: 14px;
-  background: #fff;
-  border-right: 2px solid #f2a6c4;
-  border-bottom: 2px solid #f2a6c4;
+  background: #fffaf0;
+  border-right: 2px solid #d9c39c;
+  border-bottom: 2px solid #d9c39c;
   transform: translateY(50%) rotate(135deg);
 }
 
 /* Offset 20px in from the edge (not flush at -8px) so the rotated square
    never overlaps #bubble's own 16px corner radius, that overlap was the
    part of the square poking past the curve as a stray white patch. */
-.side-right #bubble-pointer { left: 20px; transform: translateY(50%) rotate(45deg); border-right:none; border-bottom:none; border-left: 2px solid #f2a6c4; border-top: 2px solid #f2a6c4; }
+.side-right #bubble-pointer { left: 20px; transform: translateY(50%) rotate(45deg); border-right:none; border-bottom:none; border-left: 2px solid #d9c39c; border-top: 2px solid #d9c39c; }
 .side-left #bubble-pointer { right: 20px; }
 
 .hidden { display: none !important; }
