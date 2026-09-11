@@ -1,4 +1,4 @@
-# 🌸 Desktop Pet
+# Desktop Pet
 
 A tiny animated pixel-art companion that lives on top of your screen. It
 walks on-screen every few minutes to check in on you, reminds you to drink
@@ -7,7 +7,7 @@ by default, or with a real LLM behind an OpenAI key). Everything runs
 locally on your own machine: no server, no telemetry, no account.
 
 <p align="center">
-  <img src="assets/sprites/pet.png" alt="Desktop Pet character" width="160" />
+  <img src="assets/sprites/cat/idle.png" alt="Desktop Pet character" width="160" />
 </p>
 
 Add a GIF or screenshot of the pet walking on screen and the chat bubble
@@ -194,10 +194,14 @@ Look in the generated `dist/` folder for:
 
 ## Customization
 
-**Swap the character art.** Replace `assets/sprites/pet.png` (keep the
-same filename) and the app scales and pads it automatically. All
-current animation (bob, squash, walk bounce, blink, flip) is pure
-CSS/JS driven off that single image.
+**Swap the character art.** The pet has one expression sprite per mood in
+`assets/sprites/cat/` (see the `MOOD_SPRITES` map in `main.js`), all
+cropped to the same canvas size so switching expression never changes
+the window's aspect ratio. Replace any of those files (keep the same
+filenames) or run `scripts/extract_cat_sprites.py` again against a new
+source image to regenerate the whole set. All current animation (bob,
+squash, walk bounce, blink, flip) is pure CSS/JS driven off whichever
+image is currently loaded.
 
 **Move to a real sprite sheet or frame-by-frame animation later.** The
 animation logic is centralized in [renderer/pet/pet.js](renderer/pet/pet.js)
@@ -232,7 +236,7 @@ desktop-pet/
     chat/                      The compact chat window
     settings/                  The settings screen
   assets/
-    sprites/pet.png             Pet artwork (background removed)
+    sprites/cat/*.png            Pet artwork, one expression per mood (background removed)
     icons/                      Tray / summon button / app icons
     sounds/chime.wav             Small notification chime
   launch.bat / launch.command                   Everyday launcher

@@ -32,5 +32,11 @@ contextBridge.exposeInMainWorld('api', {
   pause: {
     set: (mode) => ipcRenderer.invoke('pause:set', mode),
     get: () => ipcRenderer.invoke('pause:get')
+  },
+  study: {
+    start: (cfg) => ipcRenderer.invoke('study:start', cfg),
+    stop: () => ipcRenderer.invoke('study:stop'),
+    getStatus: () => ipcRenderer.invoke('study:getStatus'),
+    onStatus: (cb) => ipcRenderer.on('study:status', (event, data) => cb(data))
   }
 });

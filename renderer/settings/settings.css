@@ -41,7 +41,7 @@ section {
   color: #a5607f;
   margin: 0 0 4px;
 }
-select, input[type="number"], input[type="password"], input[type="time"] {
+select, input[type="number"], input[type="password"], input[type="time"], textarea {
   border: 1.5px solid #f2c4d6;
   border-radius: 8px;
   padding: 5px 8px;
@@ -49,8 +49,9 @@ select, input[type="number"], input[type="password"], input[type="time"] {
   color: #4a2438;
   outline: none;
   background: #fff;
+  font-family: inherit;
 }
-select:focus, input:focus { border-color: #f2a6c4; }
+select:focus, input:focus, textarea:focus { border-color: #f2a6c4; }
 input[type="checkbox"] {
   width: 17px;
   height: 17px;

@@ -18,11 +18,35 @@ const {
 const store = require('./store');
 const basicChat = require('./lib/basicChat');
 const ai = require('./lib/ai');
+const activeWindow = require('./lib/activeWindow');
+const studySession = require('./lib/studySession');
 const { getPetDimensions, BUBBLE_WIDTH, BUBBLE_GAP } = require('./lib/petSizes');
 
 const ASSETS = path.join(__dirname, 'assets');
-const PET_SPRITE_PATH = path.join(ASSETS, 'sprites', 'pet.png');
+const CAT_SPRITES_DIR = path.join(ASSETS, 'sprites', 'cat');
 const CHIME_PATH = path.join(ASSETS, 'sounds', 'chime.wav');
+
+// One expression per visit "kind"/message category, all cropped to the same
+// canvas size (see scripts/extract_cat_sprites.py) so switching between them
+// never changes the pet window's aspect ratio.
+const MOOD_SPRITES = {
+  idle: 'idle.png',
+  greeting: 'greeting.png',
+  water: 'water.png',
+  stretch: 'stretch.png',
+  break: 'break_happy.png',
+  mood: 'mood.png',
+  distraction: 'distraction.png',
+  breakTime: 'break_happy.png',
+  backToWork: 'back_to_work.png',
+  goalComplete: 'goal_complete.png',
+  wander: 'wander.png'
+};
+
+function spriteUrlForMood(mood) {
+  const file = MOOD_SPRITES[mood] || MOOD_SPRITES.idle;
+  return 'file://' + path.join(CAT_SPRITES_DIR, file).replace(/\\/g, '/');
+}
 
 app.setName('desktop-pet'); // locks the userData folder name regardless of productName
 
@@ -50,6 +74,7 @@ const state = {
   direction: 1, // 1 = facing right, -1 = facing left
   restBounds: null, // current resting {x,y,width,height} of petWin while visible
   visitWorkArea: null, // the monitor's workArea locked in for the current visit, so it can't drift mid-visit if the cursor moves to another monitor
+  currentBubbleText: null, // whatever the speech bubble is showing right now, if any; carried into chat so clicking mid-message doesn't lose it
   chatPinningPet: false, // true while chat is open, suppresses auto-leave
   pendingLeaveTimer: null,
   bubbleHideTimer: null
@@ -57,6 +82,7 @@ const state = {
 
 let visitTimerHandle = null;
 let waterTimerHandle = null;
+let stretchTimerHandle = null;
 let wanderTimerHandle = null;
 let summonDragStart = null; // { cursorX, cursorY, winX, winY }, set while the summon button is being dragged
 
@@ -71,6 +97,20 @@ function workArea() {
   const saved = store.load().summonButtonPos;
   if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') {
     return screen.getDisplayNearestPoint({ x: saved.x, y: saved.y }).workArea;
+  }
+  return screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+}
+
+// Resolves the monitor the user's active/focused window is actually on
+// (falls back to cursor position when that can't be determined, e.g. on
+// non-Windows platforms). Preferred over pure cursor position because the
+// cursor can rest on another monitor (e.g. near the summon button) while the
+// user is actively typing/working on a different one.
+async function activeMonitorWorkArea() {
+  const info = await activeWindow.getActiveWindowInfo();
+  if (info && Number.isFinite(info.width) && info.width > 0 && Number.isFinite(info.height) && info.height > 0) {
+    const center = { x: Math.round(info.x + info.width / 2), y: Math.round(info.y + info.height / 2) };
+    return screen.getDisplayNearestPoint(center).workArea;
   }
   return screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
 }
@@ -90,8 +130,6 @@ function easeInOutQuad(t) {
 function animateBounds(win, from, to, duration, easing, onUpdate, onDone) {
   if (!win || win.isDestroyed()) return;
   const start = Date.now();
-  const width = from.width;
-  const height = from.height;
 
   const step = () => {
     if (!win || win.isDestroyed()) return;
@@ -100,6 +138,8 @@ function animateBounds(win, from, to, duration, easing, onUpdate, onDone) {
     const e = easing(t);
     const x = Math.round(from.x + (to.x - from.x) * e);
     const y = Math.round(from.y + (to.y - from.y) * e);
+    const width = Math.round(from.width + (to.width - from.width) * e);
+    const height = Math.round(from.height + (to.height - from.height) * e);
     win.setBounds({ x, y, width, height });
     if (onUpdate) onUpdate(t);
     if (t < 1) {
@@ -245,12 +285,12 @@ function ensurePetWindow() {
   return petWin;
 }
 
-function sendPetInit() {
+function sendPetInit(mood) {
   if (!petWin || petWin.isDestroyed()) return;
   const settings = store.load();
   const dims = getPetDimensions(settings.petSize);
   petWin.webContents.send('pet:init', {
-    spriteUrl: 'file://' + PET_SPRITE_PATH.replace(/\\/g, '/'),
+    spriteUrl: spriteUrlForMood(mood),
     ...dims,
     direction: state.direction,
     soundEnabled: settings.soundEnabled,
@@ -269,32 +309,42 @@ function bubbleSideAndBounds(wa, restX, windowWidth, windowHeight) {
   const fitsRight = restX + windowWidth + BUBBLE_GAP + BUBBLE_WIDTH + 16 <= wa.x + wa.width;
   const side = fitsRight ? 'right' : 'left';
   const grownWidth = windowWidth + BUBBLE_GAP + BUBBLE_WIDTH;
-  const x = side === 'right' ? restX : Math.max(wa.x, restX - (BUBBLE_GAP + BUBBLE_WIDTH));
-  return { side, bounds: { x, width: grownWidth } };
+  let x = side === 'right' ? restX : restX - (BUBBLE_GAP + BUBBLE_WIDTH);
+
+  // Clamp so the widened window always stays fully inside this monitor's
+  // work area. Without this, on a narrow/secondary monitor (or with the pet
+  // parked close to an edge) the window could extend past the display's
+  // actual pixel space, that overflow is never rendered anywhere, which is
+  // what made the bubble look cut off (only its corner/pointer still on-screen).
+  const width = Math.min(grownWidth, wa.width);
+  x = clamp(x, wa.x, wa.x + wa.width - width);
+
+  return { side, bounds: { x, width } };
 }
 
 // Every kind of visit (scheduled or manually summoned) shows up on
-// whichever monitor the user's cursor is on right now, that's the monitor
-// they're actually looking at, so the pet never appears on a screen you're
+// whichever monitor the user is actually looking at right now (their
+// focused window's monitor), so the pet never appears on a screen you're
 // not using.
-function resolveVisitWorkArea() {
-  return screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+async function resolveVisitWorkArea() {
+  return activeMonitorWorkArea();
 }
 
 /**
  * Full visit sequence: walk on → (optional bubble) → walk off.
  * kind: 'auto' | 'water' | 'manual' | 'wander'
  */
-function runVisit(kind) {
+async function runVisit(kind) {
   if (state.petVisible || state.petBusy) return;
+  state.petBusy = true; // set synchronously so overlapping triggers can't slip in while we await below
   const settings = store.load();
   const win = ensurePetWindow();
   const dims = getPetDimensions(settings.petSize);
-  const wa = resolveVisitWorkArea();
+  const wa = await resolveVisitWorkArea();
   state.visitWorkArea = wa;
 
-  state.petBusy = true;
   state.petVisible = true;
+  state.currentBubbleText = null;
 
   const enterFromLeft = Math.random() < 0.5;
   state.direction = enterFromLeft ? 1 : -1;
@@ -308,8 +358,12 @@ function runVisit(kind) {
   );
   const startX = enterFromLeft ? wa.x - dims.windowWidth - 20 : wa.x + wa.width + 20;
 
+  const showBubble = kind !== 'wander';
+  const directCategories = ['water', 'stretch', 'distraction', 'breakTime', 'backToWork', 'goalComplete'];
+  const category = kind === 'wander' ? 'wander' : (directCategories.includes(kind) ? kind : weightedRandomCategory());
+
   win.setBounds({ x: startX, y: restY, width: dims.windowWidth, height: dims.windowHeight });
-  sendPetInit();
+  sendPetInit(category);
   win.showInactive();
   win.webContents.send('pet:command', { type: 'walk-start', direction: state.direction });
 
@@ -328,10 +382,9 @@ function runVisit(kind) {
       state.restBounds = { x: restX, y: restY, width: dims.windowWidth, height: dims.windowHeight };
       win.webContents.send('pet:command', { type: 'idle-start' });
 
-      const showBubble = kind !== 'wander';
       if (showBubble) {
-        const category = kind === 'water' ? 'water' : weightedRandomCategory();
         const text = pickVisitMessage(category);
+        state.currentBubbleText = text;
         const { side, bounds } = bubbleSideAndBounds(wa, restX, dims.windowWidth, dims.windowHeight);
 
         win.webContents.send('pet:command', { type: 'bubble-show', text, side });
@@ -567,7 +620,10 @@ function openChat() {
       const wa = state.visitWorkArea || workArea();
       const fitsRight = restX + dims.windowWidth + 14 + chatWidth <= wa.x + wa.width;
       const x = fitsRight ? restX + dims.windowWidth + 14 : Math.max(wa.x, restX - chatWidth - 14);
-      const y = clamp(restY + dims.windowHeight - chatHeight, wa.y, wa.y + wa.height - chatHeight);
+      // Anchor the top of the chat panel level with the pet's head (restY),
+      // not its feet, so it opens upward beside the head instead of hovering
+      // low around the feet.
+      const y = clamp(restY, wa.y, wa.y + wa.height - chatHeight);
 
       chatWin = new BrowserWindow({
         width: chatWidth,
@@ -593,8 +649,13 @@ function openChat() {
       chatWin.webContents.once('did-finish-load', () => {
         const personality = ai.loadPersonality();
         chatHistory = [];
+        // If the pet's speech bubble was still showing something when it was
+        // clicked, carry that exact message into chat instead of losing it,
+        // so the user still gets to read it, just now inside the chat panel.
+        const greeting = state.currentBubbleText || personality.greetingWhenChatOpens || "Hi! What's up?";
+        state.currentBubbleText = null;
         chatWin.webContents.send('chat:init', {
-          greeting: personality.greetingWhenChatOpens || "Hi! What's up?",
+          greeting,
           aiMode: !!store.load().aiChatEnabled
         });
         // Only reveal the window once its content is ready to paint, so it
@@ -763,6 +824,20 @@ function scheduleNextWater() {
   }, delay);
 }
 
+function scheduleNextStretch() {
+  if (stretchTimerHandle) clearTimeout(stretchTimerHandle);
+  const minutes = Number(store.load().stretchReminderMinutes) || 30;
+  const base = minutes * 60 * 1000;
+  const jitter = base * 0.1;
+  const delay = base + randomBetween(-jitter, jitter);
+  stretchTimerHandle = setTimeout(() => {
+    if (!isAutoSuppressed()) {
+      runVisit('stretch');
+    }
+    scheduleNextStretch();
+  }, delay);
+}
+
 function scheduleNextWander() {
   if (wanderTimerHandle) clearTimeout(wanderTimerHandle);
   const delay = randomBetween(3 * 60 * 1000, 8 * 60 * 1000);
@@ -773,6 +848,75 @@ function scheduleNextWander() {
     scheduleNextWander();
   }, delay);
 }
+
+// ---------------------------------------------------------------------------
+// Study goal / pomodoro session
+// ---------------------------------------------------------------------------
+
+let distractionCheckHandle = null;
+let lastDistractionNagAt = 0;
+const DISTRACTION_CHECK_MS = 20000;
+const DISTRACTION_NAG_COOLDOWN_MS = 3 * 60 * 1000;
+
+function startStudySession(overrides) {
+  const settings = store.load();
+  const cfg = { ...settings.studyGoal, ...(overrides || {}) };
+  store.save({ studyGoal: cfg });
+  studySession.start(cfg);
+  if (!distractionCheckHandle) {
+    distractionCheckHandle = setInterval(checkForDistraction, DISTRACTION_CHECK_MS);
+  }
+}
+
+function stopStudySession() {
+  studySession.stop();
+  if (distractionCheckHandle) {
+    clearInterval(distractionCheckHandle);
+    distractionCheckHandle = null;
+  }
+}
+
+// Only fires for apps/titles the user listed, so a false positive (e.g. a
+// coincidental substring match) is on the user's own configured keywords.
+async function checkForDistraction() {
+  const status = studySession.getStatus();
+  if (!status.active || status.phase !== 'work') return;
+  if (isAutoSuppressed()) return;
+  if (Date.now() - lastDistractionNagAt < DISTRACTION_NAG_COOLDOWN_MS) return;
+
+  const info = await activeWindow.getActiveWindowInfo();
+  if (!info) return;
+  const keywords = (store.load().studyGoal.distractionKeywords || [])
+    .map((k) => String(k).toLowerCase().trim())
+    .filter(Boolean);
+  if (!keywords.length) return;
+
+  const haystack = `${info.processName || ''} ${info.title || ''}`.toLowerCase();
+  if (!keywords.some((k) => haystack.includes(k))) return;
+
+  lastDistractionNagAt = Date.now();
+  runVisit('distraction');
+}
+
+studySession.on('phaseChange', ({ phase }) => {
+  if (!isAutoSuppressed()) runVisit(phase === 'break' ? 'breakTime' : 'backToWork');
+  if (settingsWin && !settingsWin.isDestroyed()) {
+    settingsWin.webContents.send('study:status', studySession.getStatus());
+  }
+});
+
+studySession.on('stopped', () => {
+  if (settingsWin && !settingsWin.isDestroyed()) {
+    settingsWin.webContents.send('study:status', studySession.getStatus());
+  }
+});
+
+studySession.on('completed', () => {
+  if (!isAutoSuppressed()) runVisit('goalComplete');
+  if (settingsWin && !settingsWin.isDestroyed()) {
+    settingsWin.webContents.send('study:status', studySession.getStatus());
+  }
+});
 
 // ---------------------------------------------------------------------------
 // API key handling (encrypted at rest via Electron's OS-level safeStorage)
@@ -874,7 +1018,7 @@ function registerIpc() {
       const key = getDecryptedApiKey();
       if (key) {
         try {
-          const reply = await ai.chat(key, chatHistory);
+          const reply = await ai.chat(key, chatHistory, { baseUrl: settings.aiBaseUrl, model: settings.aiModel });
           chatHistory.push({ role: 'assistant', content: reply });
           return { reply, mode: 'ai' };
         } catch (err) {
@@ -903,6 +1047,9 @@ function registerIpc() {
     }
     if (Object.prototype.hasOwnProperty.call(partial, 'waterReminderMinutes')) {
       scheduleNextWater();
+    }
+    if (Object.prototype.hasOwnProperty.call(partial, 'stretchReminderMinutes')) {
+      scheduleNextStretch();
     }
     if (Object.prototype.hasOwnProperty.call(partial, 'launchAtStartup')) {
       app.setLoginItemSettings({ openAtLogin: !!partial.launchAtStartup });
@@ -938,6 +1085,18 @@ function registerIpc() {
   });
 
   ipcMain.handle('pause:get', () => ({ ...store.load().pause, active: isPausedNow() }));
+
+  ipcMain.handle('study:start', (event, cfg) => {
+    startStudySession(cfg);
+    return studySession.getStatus();
+  });
+
+  ipcMain.handle('study:stop', () => {
+    stopStudySession();
+    return studySession.getStatus();
+  });
+
+  ipcMain.handle('study:getStatus', () => studySession.getStatus());
 }
 
 // ---------------------------------------------------------------------------
@@ -973,9 +1132,11 @@ if (gotLock) {
     createTray();
     ensureSummonWindow();
     ensurePetWindow();
+    activeWindow.warmUp();
 
     scheduleNextVisit();
     scheduleNextWater();
+    scheduleNextStretch();
     scheduleNextWander();
 
     if (process.argv.includes('--bring-on-screen')) {
@@ -995,7 +1156,10 @@ if (gotLock) {
   app.on('before-quit', () => {
     if (visitTimerHandle) clearTimeout(visitTimerHandle);
     if (waterTimerHandle) clearTimeout(waterTimerHandle);
+    if (stretchTimerHandle) clearTimeout(stretchTimerHandle);
     if (wanderTimerHandle) clearTimeout(wanderTimerHandle);
     if (state.bubbleHideTimer) clearTimeout(state.bubbleHideTimer);
+    stopStudySession();
+    activeWindow.shutdown();
   });
 }

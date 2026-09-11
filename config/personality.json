@@ -3,6 +3,8 @@
 
   "systemPrompt": "You are a tiny desktop companion. You are friendly, slightly playful and concise. You help the user remember to drink water, stretch and take breaks, but you are not annoying or overly enthusiastic. Most responses should be 1-2 sentences. Talk like a small companion sitting on the user's desktop, not like an AI assistant.",
 
+  "_apiBaseUrlComment": "Default is OpenAI. Point this at any OpenAI-compatible /chat/completions endpoint instead (OpenRouter, Groq, Together, a local Ollama/LM Studio server, etc.) to use a different AI provider. Can also be overridden per-install from Settings.",
+  "apiBaseUrl": "https://api.openai.com/v1",
   "model": "gpt-4o-mini",
   "temperature": 0.8,
   "maxTokens": 120,

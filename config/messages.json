@@ -7,33 +7,119 @@
       "Hi, checking in.",
       "Hi, still doing okay?",
       "Hey there!",
-      "Just saying hi."
+      "Just saying hi.",
+      "Knock knock, it's just me.",
+      "Popping by to say hello!",
+      "Hey, how's your day going?",
+      "Just wandered over to see you.",
+      "Hi hi! Anything fun happening?",
+      "Guess who's here.",
+      "Hey friend, how's it going?",
+      "Still here, still rooting for you.",
+      "Hi! Took a little walk over to say hey."
     ],
     "water": [
       "Hi, want some water?",
       "Hi, water check.",
       "Staying hydrated?",
-      "Sip of water?"
+      "Sip of water?",
+      "Psst, when's the last time you drank some water?",
+      "A little water break never hurts.",
+      "Hydration reminder, go on!",
+      "Water o'clock! Grab a glass.",
+      "Your body will thank you, drink some water.",
+      "Quick sip of water sounds nice right now.",
+      "Don't forget to hydrate!",
+      "Glass of water, on me (well, in spirit)."
     ],
     "stretch": [
       "Hi, quick stretch?",
       "Stretch break?",
       "Shoulders could use a roll.",
-      "Stand up and stretch a sec?"
+      "Stand up and stretch a sec?",
+      "Roll those shoulders back, you've earned it.",
+      "Neck feeling stiff? Give it a gentle stretch.",
+      "Time to unfold from that chair for a sec.",
+      "A quick stretch does wonders, promise.",
+      "Wiggle those fingers and stretch those arms!",
+      "Stand, stretch, breathe, then back at it.",
+      "Your back called, it wants a stretch.",
+      "Little stretch break, then right back to it."
     ],
     "break": [
       "Hi, need a break?",
       "Maybe a short break?",
       "You've been at it a while.",
-      "Break time?"
+      "Break time?",
+      "How about a few minutes to just breathe?",
+      "A short pause could recharge you.",
+      "You've earned a little breather.",
+      "Step away for a bit, it'll still be here.",
+      "Rest is part of the work too.",
+      "Five minutes off the screen, sounds good?",
+      "Let's take a tiny pause together.",
+      "Even superheroes need breaks."
     ],
     "mood": [
       "Hi, checking in, okay?",
       "How's it going over there?",
       "Mood check!",
-      "All good?"
+      "All good?",
+      "How are you feeling right now?",
+      "Just checking, everything okay?",
+      "Sending a little good energy your way.",
+      "You're doing better than you think.",
+      "Whatever's going on, I'm rooting for you.",
+      "Take a breath, you're doing fine.",
+      "A tiny reminder that you matter.",
+      "Hope your day is treating you well."
+    ],
+    "distraction": [
+      "Wasn't this supposed to be study time?",
+      "Hey, back to it, okay? You've got this.",
+      "Focus check! Let's get back on track.",
+      "Sneaky break? Come on, back to studying.",
+      "Caught you! Time to refocus.",
+      "This wasn't on the study plan, was it?",
+      "Let's park this and get back to work.",
+      "Your goal is waiting for you, come on.",
+      "A little detour, huh? Let's return to focus.",
+      "Study time is calling your name!",
+      "Not judging, just nudging, back to it!",
+      "Future you will thank present you for refocusing now."
+    ],
+    "breakTime": [
+      "Break time! Go stretch or grab some water.",
+      "Nice work, take a breather.",
+      "Pomodoro break, you earned it!",
+      "Time's up for this round, go relax a bit.",
+      "You crushed that session, now rest up.",
+      "Break unlocked! Enjoy it.",
+      "Step away, recharge, you've done great.",
+      "That's a wrap for now, take it easy."
+    ],
+    "backToWork": [
+      "Break's over, let's get back to it.",
+      "Ready for another round?",
+      "Back to studying, you can do this!",
+      "Recharged? Let's dive back in.",
+      "Time to lock back in, you've got this.",
+      "Round two, let's go!",
+      "Hope that break helped, back to focus mode.",
+      "Let's keep the momentum going."
+    ],
+    "goalComplete": [
+      "Goal reached! Great job today.",
+      "Study session complete, nicely done!",
+      "That's the goal hit, go celebrate a little.",
+      "You did it! Time to be proud of yourself.",
+      "Mission accomplished for today, well done!",
+      "That's a wrap, and a great one at that.",
+      "Look at you, goal crushed!",
+      "Today's a win, take the rest of it easy."
     ]
   },
+
 
   "visitCategoryWeights": {
     "greeting": 3,
@@ -45,25 +131,34 @@
 
   "basicChat": {
     "patterns": [
-      { "match": ["hi", "hello", "hey", "yo", "sup", "hiya"], "category": "greeting" },
+      { "match": ["hi", "hello", "hey", "yo", "sup", "hiya", "morning", "afternoon", "evening"], "category": "greeting" },
       { "match": ["nice to meet you", "nice meeting you"], "category": "niceToMeet" },
-      { "match": ["how are you", "how r u", "hru", "how you doing"], "category": "howAreYou" },
-      { "match": ["i'm tired", "im tired", "so tired", "exhausted", "sleepy"], "category": "tired" },
+      { "match": ["how are you", "how r u", "hru", "how you doing", "how's it going"], "category": "howAreYou" },
+      { "match": ["i'm tired", "im tired", "so tired", "exhausted", "sleepy", "burnt out", "burned out"], "category": "tired" },
       { "match": ["i need water", "need water", "thirsty", "water"], "category": "water" },
-      { "match": ["stressed", "anxious", "overwhelmed", "i'm stressed"], "category": "stressed" },
-      { "match": ["bye", "goodbye", "see you", "gtg"], "category": "bye" },
-      { "match": ["thanks", "thank you", "ty"], "category": "thanks" }
+      { "match": ["stressed", "anxious", "overwhelmed", "i'm stressed", "nervous", "panicking"], "category": "stressed" },
+      { "match": ["bye", "goodbye", "see you", "gtg", "good night", "goodnight"], "category": "bye" },
+      { "match": ["thanks", "thank you", "ty", "appreciate it"], "category": "thanks" },
+      { "match": ["i did it", "finished", "done with it", "completed", "i passed", "i won"], "category": "celebrate" },
+      { "match": ["i failed", "i lost", "didn't work", "messed up", "i'm bad at this"], "category": "encourage" },
+      { "match": ["bored", "boring", "nothing to do"], "category": "bored" },
+      { "match": ["love you", "i love you"], "category": "love" }
     ],
     "responses": {
-      "greeting": ["Hi there! Good to see you.", "Hey! I'm here.", "Hello! What's up?"],
-      "niceToMeet": ["Nice to meet you too! I'm happy to be your desk buddy.", "Likewise! I'll be around if you need me."],
-      "howAreYou": ["I'm just a tiny pixel, but doing great! How about you?", "Living my best pixelated life. You?"],
-      "tired": ["Aw. Maybe a short break would help, I'll be right here.", "Sounds like it's time to rest your eyes for a bit."],
-      "water": ["Good call, go grab some water. I'll wait!", "Hydration first! Go on, I'm not going anywhere."],
-      "stressed": ["Take a slow breath with me for a sec. You've got this.", "That sounds heavy. One small step at a time, okay?"],
-      "bye": ["Bye for now! I'll be right here if you need me.", "See you soon!"],
-      "thanks": ["Anytime!", "That's what I'm here for."],
-      "fallback": ["I hear you.", "Mm, tell me more.", "I'm listening.", "Got it."]
+      "greeting": ["Hi there! Good to see you.", "Hey! I'm here.", "Hello! What's up?", "Hiya! Glad you stopped by.", "Hey hey, what's going on?"],
+      "niceToMeet": ["Nice to meet you too! I'm happy to be your desk buddy.", "Likewise! I'll be around if you need me.", "Aw, nice to meet you as well!"],
+      "howAreYou": ["I'm just a tiny pixel, but doing great! How about you?", "Living my best pixelated life. You?", "Doing well over here, thanks for asking! And you?"],
+      "tired": ["Aw. Maybe a short break would help, I'll be right here.", "Sounds like it's time to rest your eyes for a bit.", "Tired days happen, be gentle with yourself.", "Maybe a stretch and some water could help a little."],
+      "water": ["Good call, go grab some water. I'll wait!", "Hydration first! Go on, I'm not going anywhere.", "Yes! Water break, go on."],
+      "stressed": ["Take a slow breath with me for a sec. You've got this.", "That sounds heavy. One small step at a time, okay?", "It's okay to feel that way, let's slow down for a moment."],
+      "bye": ["Bye for now! I'll be right here if you need me.", "See you soon!", "Take care, I'll be around."],
+      "thanks": ["Anytime!", "That's what I'm here for.", "Happy to help!"],
+      "celebrate": ["Yes!! That's amazing, congrats!", "Look at you go! So proud.", "Woo! That's fantastic news."],
+      "encourage": ["Hey, that happens to everyone. You'll get it next time.", "One setback doesn't define you, keep going.", "It's okay, be kind to yourself, try again when ready."],
+      "bored": ["Maybe a quick stretch or a change of scenery could help?", "Ooh, want a random distraction? I'm full of those.", "Boredom happens, maybe it's a sign for a tiny break."],
+      "love": ["Aw, love you too!", "You're the best, you know that?", "That means a lot, thank you!"],
+      "fallback": ["I hear you.", "Mm, tell me more.", "I'm listening.", "Got it.", "Interesting, go on.", "I'm here for it."]
     }
   }
 }
+

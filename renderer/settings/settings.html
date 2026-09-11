@@ -51,6 +51,17 @@
     </section>
 
     <section>
+      <h2>Stretch reminders</h2>
+      <label class="row">
+        <span>Remind me every</span>
+        <div class="inline">
+          <input type="number" id="stretchReminderMinutes" min="5" max="480" style="width:70px" />
+          <span>minutes</span>
+        </div>
+      </label>
+    </section>
+
+    <section>
       <h2>Appearance &amp; sound</h2>
       <label class="row">
         <span>Pet size</span>
@@ -79,9 +90,22 @@
         <span>AI chat mode</span>
         <input type="checkbox" id="aiChatEnabled" />
       </label>
-      <p class="hint">Off = built-in offline replies. On = uses OpenAI with the key below.</p>
+      <p class="hint">Off = built-in offline replies. On = uses the AI provider below with the key below.</p>
       <label class="row">
-        <span>OpenAI API key</span>
+        <span>API base URL</span>
+        <div class="inline">
+          <input type="text" id="aiBaseUrl" placeholder="https://api.openai.com/v1" style="flex:1" />
+        </div>
+      </label>
+      <p class="hint">Leave blank for OpenAI. Works with any OpenAI-compatible endpoint (OpenRouter, Groq, Together, a local Ollama/LM Studio server, etc.).</p>
+      <label class="row">
+        <span>Model</span>
+        <div class="inline">
+          <input type="text" id="aiModel" placeholder="gpt-4o-mini" style="flex:1" />
+        </div>
+      </label>
+      <label class="row">
+        <span>API key</span>
         <div class="inline">
           <input type="password" id="apiKeyInput" placeholder="sk-..." style="flex:1" />
         </div>
@@ -107,6 +131,35 @@
         <span>To</span>
         <input type="time" id="quietHoursEnd" />
       </label>
+    </section>
+
+    <section>
+      <h2>Study goal</h2>
+      <p class="hint">Set a total goal duration split into pomodoro-style work/break intervals. While a session is running and it's a work interval, the pet pops up if your focused app/window matches one of the distraction keywords below.</p>
+      <label class="row">
+        <span>Goal duration (minutes)</span>
+        <input type="number" id="studyTotalMinutes" min="1" max="1440" style="width:70px" />
+      </label>
+      <label class="row">
+        <span>Work interval (minutes)</span>
+        <input type="number" id="studyWorkMinutes" min="1" max="180" style="width:70px" />
+      </label>
+      <label class="row">
+        <span>Break interval (minutes)</span>
+        <input type="number" id="studyBreakMinutes" min="1" max="60" style="width:70px" />
+      </label>
+      <label class="row" style="align-items:flex-start;">
+        <span>Distraction keywords</span>
+        <textarea id="studyDistractionKeywords" rows="2" placeholder="youtube, netflix, discord" style="flex:1; margin-left:12px; resize:vertical;"></textarea>
+      </label>
+      <p class="hint">Comma-separated, matched against the focused app's process name/window title.</p>
+      <div class="inline" style="margin-top:6px; justify-content:space-between;">
+        <span id="studyStatus" class="hint">No session running.</span>
+        <div class="inline" style="gap:8px;">
+          <button id="studyStopBtn" class="btn-secondary">Stop</button>
+          <button id="studyStartBtn" class="btn-primary">Start session</button>
+        </div>
+      </div>
     </section>
 
     <section>

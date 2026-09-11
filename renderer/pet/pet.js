@@ -10,6 +10,8 @@ const chime = document.getElementById('chime');
 let soundEnabled = true;
 let blinkTimer = null;
 let fidgetTimer = null;
+let petFigureWidth = 0;
+let bubbleGap = 14;
 
 function scheduleBlink() {
   clearTimeout(blinkTimer);
@@ -63,6 +65,8 @@ window.api.pet.onInit((data) => {
 
   figure.style.width = data.spriteWidth + 'px';
   figure.style.height = data.spriteHeight + 'px';
+  petFigureWidth = data.spriteWidth;
+  bubbleGap = data.bubbleGap || 14;
 
   const speed = data.animationSpeedMultiplier || 1;
   figure.style.setProperty('--speed', speed);
@@ -86,8 +90,18 @@ window.api.pet.onCommand((cmd) => {
     figure.classList.add('squash');
     setTimeout(() => figure.classList.remove('squash'), 260);
   } else if (cmd.type === 'bubble-show') {
-    stage.classList.toggle('side-left', cmd.side === 'left');
-    stage.classList.toggle('side-right', cmd.side !== 'left');
+    const isLeft = cmd.side === 'left';
+    stage.classList.toggle('side-left', isLeft);
+    stage.classList.toggle('side-right', !isLeft);
+    // Anchor the bubble directly off the pet's own width instead of letting
+    // flexbox distribute the space, that was silently collapsing this box.
+    if (isLeft) {
+      bubble.style.right = (petFigureWidth + bubbleGap) + 'px';
+      bubble.style.left = 'auto';
+    } else {
+      bubble.style.left = (petFigureWidth + bubbleGap) + 'px';
+      bubble.style.right = 'auto';
+    }
     bubbleText.textContent = cmd.text;
     bubble.classList.remove('hidden');
     // small delay so the CSS transition actually plays

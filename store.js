@@ -16,6 +16,7 @@ const DEFAULTS = {
   visitFrequencyCustomMinutes: null, // used when visitFrequencyMinutes === 'custom'
 
   waterReminderMinutes: 45, // independent water-reminder cadence
+  stretchReminderMinutes: 30, // independent stretch-reminder cadence
   checkInsEnabled: true, // greeting/mood check-in visits on/off
   soundEnabled: true,
 
@@ -24,6 +25,8 @@ const DEFAULTS = {
 
   aiChatEnabled: false, // AI mode toggle (requires API key)
   apiKeyEncrypted: null, // base64 string, encrypted via Electron safeStorage, never plaintext
+  aiBaseUrl: '', // empty = use config/personality.json's apiBaseUrl (OpenAI by default); set to use any OpenAI-compatible provider instead
+  aiModel: '', // empty = use config/personality.json's model
 
   launchAtStartup: false,
   alwaysOnTop: true,
@@ -40,6 +43,16 @@ const DEFAULTS = {
   pause: {
     mode: null, // null | '30m' | '1h' | 'tomorrow'
     until: null // epoch ms, or null
+  },
+
+  studyGoal: {
+    totalMinutes: 120, // whole session length
+    workMinutes: 25, // pomodoro work interval
+    breakMinutes: 5, // pomodoro break interval
+    // Substrings matched (case-insensitive) against the focused window's
+    // process name/title during a work interval; a match pops the pet up
+    // to nudge you back. Session itself is not persisted, only this config.
+    distractionKeywords: ['instagram', 'netflix', 'twitch', 'tiktok', 'steam', 'discord', 'webtoon']
   }
 };
 
