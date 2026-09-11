@@ -153,13 +153,18 @@ html, body {
   background: #fffaf0;
   border-right: 2px solid #d9c39c;
   border-bottom: 2px solid #d9c39c;
-  transform: translateY(50%) rotate(135deg);
+  /* rotate(45deg) here (not 135deg) is what puts the two bordered edges in
+     the half of the diamond that pokes out below the bubble; at 135deg
+     the bordered edges land in the hidden top half instead, so only a
+     bare, un-outlined corner showed below the bubble, an upward "/\" glitch
+     instead of a bordered downward "V" notch. */
+  transform: translateY(50%) rotate(45deg);
 }
 
 /* Offset 20px in from the edge (not flush at -8px) so the rotated square
    never overlaps #bubble's own 16px corner radius, that overlap was the
    part of the square poking past the curve as a stray white patch. */
-.side-right #bubble-pointer { left: 20px; transform: translateY(50%) rotate(45deg); border-right:none; border-bottom:none; border-left: 2px solid #d9c39c; border-top: 2px solid #d9c39c; }
+.side-right #bubble-pointer { left: 20px; }
 .side-left #bubble-pointer { right: 20px; }
 
 .hidden { display: none !important; }
