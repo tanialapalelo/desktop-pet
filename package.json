@@ -9,9 +9,54 @@
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
-    "postinstall": "node -e \"console.log('\\n✔ Setup complete. Run npm start (or double-click the launcher) to open your pet.\\n')\""
+    "postinstall": "node -e \"console.log('\\n✔ Setup complete. Run npm start (or double-click the launcher) to open your pet.\\n')\"",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win"
   },
   "devDependencies": {
-    "electron": "^33.2.0"
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.desktoppet.app",
+    "productName": "Desktop Pet",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "store.js",
+      "lib/**/*",
+      "renderer/**/*",
+      "config/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "assets/icons/icon-256.png",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "assets/icons/icon-512.png",
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "icon": "assets/icons/icon-256.png",
+      "category": "Utility"
+    }
   }
 }

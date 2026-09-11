@@ -49,6 +49,7 @@ const state = {
   animating: false, // true ONLY while the window is actively mid-walk (bounds tweening); false while idle/bubble-showing
   direction: 1, // 1 = facing right, -1 = facing left
   restBounds: null, // current resting {x,y,width,height} of petWin while visible
+  visitWorkArea: null, // the monitor's workArea locked in for the current visit, so it can't drift mid-visit if the cursor moves to another monitor
   chatPinningPet: false, // true while chat is open, suppresses auto-leave
   pendingLeaveTimer: null,
   bubbleHideTimer: null
@@ -57,13 +58,21 @@ const state = {
 let visitTimerHandle = null;
 let waterTimerHandle = null;
 let wanderTimerHandle = null;
+let summonDragStart = null; // { cursorX, cursorY, winX, winY }, set while the summon button is being dragged
 
 // ---------------------------------------------------------------------------
 // Small helpers
 // ---------------------------------------------------------------------------
 
+// Multi-monitor aware: the pet/chat/visits should show up on whichever
+// monitor the summon button currently lives on (that's where the user put
+// it), not always the OS's "primary" display.
 function workArea() {
-  return screen.getPrimaryDisplay().workArea;
+  const saved = store.load().summonButtonPos;
+  if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') {
+    return screen.getDisplayNearestPoint({ x: saved.x, y: saved.y }).workArea;
+  }
+  return screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
 }
 
 function clamp(v, min, max) {
@@ -256,13 +265,20 @@ function walkDurationFor(distance) {
   return clamp(ms, 450, 1700);
 }
 
-function bubbleSideAndBounds(restX, windowWidth, windowHeight) {
-  const wa = workArea();
+function bubbleSideAndBounds(wa, restX, windowWidth, windowHeight) {
   const fitsRight = restX + windowWidth + BUBBLE_GAP + BUBBLE_WIDTH + 16 <= wa.x + wa.width;
   const side = fitsRight ? 'right' : 'left';
   const grownWidth = windowWidth + BUBBLE_GAP + BUBBLE_WIDTH;
   const x = side === 'right' ? restX : Math.max(wa.x, restX - (BUBBLE_GAP + BUBBLE_WIDTH));
   return { side, bounds: { x, width: grownWidth } };
+}
+
+// Every kind of visit (scheduled or manually summoned) shows up on
+// whichever monitor the user's cursor is on right now, that's the monitor
+// they're actually looking at, so the pet never appears on a screen you're
+// not using.
+function resolveVisitWorkArea() {
+  return screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
 }
 
 /**
@@ -274,7 +290,8 @@ function runVisit(kind) {
   const settings = store.load();
   const win = ensurePetWindow();
   const dims = getPetDimensions(settings.petSize);
-  const wa = workArea();
+  const wa = resolveVisitWorkArea();
+  state.visitWorkArea = wa;
 
   state.petBusy = true;
   state.petVisible = true;
@@ -315,15 +332,21 @@ function runVisit(kind) {
       if (showBubble) {
         const category = kind === 'water' ? 'water' : weightedRandomCategory();
         const text = pickVisitMessage(category);
-        const { side, bounds } = bubbleSideAndBounds(restX, dims.windowWidth, dims.windowHeight);
+        const { side, bounds } = bubbleSideAndBounds(wa, restX, dims.windowWidth, dims.windowHeight);
 
-        win.setBounds({
-          x: bounds.x,
-          y: restY,
-          width: bounds.width,
-          height: dims.windowHeight
-        });
         win.webContents.send('pet:command', { type: 'bubble-show', text, side });
+        // Animate the widen-for-bubble bounds change in step with the CSS
+        // fade-in (0.22s, see #bubble.visible in pet.css) instead of
+        // snapping instantly, which made the character visibly hop sideways.
+        animateBounds(
+          win,
+          { x: restX, y: restY, width: dims.windowWidth, height: dims.windowHeight },
+          { x: bounds.x, y: restY, width: bounds.width, height: dims.windowHeight },
+          220,
+          easeInOutQuad,
+          null,
+          null
+        );
 
         const bubbleDuration = randomBetween(10000, 30000);
         state.bubbleHideTimer = setTimeout(() => {
@@ -341,15 +364,27 @@ function hideBubbleAndLeave(win, dims, restX, restY) {
   if (!win || win.isDestroyed()) return;
   if (state.chatPinningPet) return; // chat is open, stay until it closes
   win.webContents.send('pet:command', { type: 'bubble-hide' });
-  // shrink window back to just the pet before walking off
-  win.setBounds({ x: restX, y: restY, width: dims.windowWidth, height: dims.windowHeight });
-  setTimeout(() => leavePet(win, dims, restX, restY), 260);
+  // Animate the shrink-back-to-just-the-pet bounds change in step with the
+  // CSS fade-out (0.22s) instead of snapping instantly, which made the
+  // character visibly hop sideways right as it disappears.
+  const current = win.getBounds();
+  animateBounds(
+    win,
+    current,
+    { x: restX, y: restY, width: dims.windowWidth, height: dims.windowHeight },
+    220,
+    easeInOutQuad,
+    null,
+    () => setTimeout(() => leavePet(win, dims, restX, restY), 40)
+  );
 }
 
 function leavePet(win, dims, restX, restY) {
   if (!win || win.isDestroyed()) return;
   if (state.chatPinningPet) return; // safety: never walk off while chat is open
-  const wa = workArea();
+  // Use the same monitor the visit started on, not wherever the cursor
+  // happens to be now (it may have moved to another monitor mid-visit).
+  const wa = state.visitWorkArea || workArea();
   const exitX = state.direction === 1 ? wa.x + wa.width + 20 : wa.x - dims.windowWidth - 20;
   win.webContents.send('pet:command', { type: 'walk-start', direction: state.direction });
   const duration = walkDurationFor(exitX - restX);
@@ -367,6 +402,7 @@ function leavePet(win, dims, restX, restY) {
       state.petVisible = false;
       state.petBusy = false;
       state.restBounds = null;
+      state.visitWorkArea = null;
     }
   );
 }
@@ -446,9 +482,14 @@ function ensurePetVisible(onReady) {
 function ensureSummonWindow() {
   if (summonWin && !summonWin.isDestroyed()) return summonWin;
 
-  const wa = workArea();
   const size = 56;
   const saved = store.load().summonButtonPos;
+  // Clamp against the display the saved position actually belongs to, not
+  // always the primary display, otherwise the button snaps back to monitor 1
+  // on every restart whenever it was last placed on a second monitor.
+  const wa = saved && typeof saved.x === 'number'
+    ? screen.getDisplayNearestPoint({ x: saved.x, y: saved.y }).workArea
+    : workArea();
   const x = clamp(saved?.x ?? wa.x + wa.width - size - 24, wa.x, wa.x + wa.width - size);
   const y = clamp(saved?.y ?? wa.y + wa.height - size - 24, wa.y, wa.y + wa.height - size);
 
@@ -494,7 +535,9 @@ function ensureSummonWindow() {
 }
 
 function clampSummonToScreen(x, y, size = 56) {
-  const wa = workArea();
+  // Clamp to whichever monitor (x, y) is currently over, so dragging the
+  // button across to a second monitor actually sticks there.
+  const wa = screen.getDisplayNearestPoint({ x, y }).workArea;
   return {
     x: clamp(x, wa.x, wa.x + wa.width - size),
     y: clamp(y, wa.y, wa.y + wa.height - size)
@@ -518,7 +561,10 @@ function openChat() {
     const createChatWindow = () => {
       const chatWidth = 300;
       const chatHeight = 360;
-      const wa = workArea();
+      // Position relative to the monitor the pet actually walked onto for
+      // this visit (may differ from the summon button's monitor if this
+      // was an automatic visit), falling back to the general helper.
+      const wa = state.visitWorkArea || workArea();
       const fitsRight = restX + dims.windowWidth + 14 + chatWidth <= wa.x + wa.width;
       const x = fitsRight ? restX + dims.windowWidth + 14 : Math.max(wa.x, restX - chatWidth - 14);
       const y = clamp(restY + dims.windowHeight - chatHeight, wa.y, wa.y + wa.height - chatHeight);
@@ -528,6 +574,7 @@ function openChat() {
         height: chatHeight,
         x,
         y,
+        show: false,
         transparent: true,
         frame: false,
         resizable: false,
@@ -550,6 +597,9 @@ function openChat() {
           greeting: personality.greetingWhenChatOpens || "Hi! What's up?",
           aiMode: !!store.load().aiChatEnabled
         });
+        // Only reveal the window once its content is ready to paint, so it
+        // never flashes blank/default-positioned for a frame first.
+        if (chatWin && !chatWin.isDestroyed()) chatWin.showInactive();
       });
 
       chatWin.on('closed', () => {
@@ -561,11 +611,20 @@ function openChat() {
 
     // The speech bubble may still be showing, which widens the pet window
     // past its base size. Collapse it back first so the chat window doesn't
-    // open on top of the still-expanded pet/bubble.
+    // open on top of the still-expanded pet/bubble. Animated (rather than an
+    // instant setBounds) so the character doesn't visibly hop sideways.
     if (petWin && !petWin.isDestroyed() && state.restBounds) {
       petWin.webContents.send('pet:command', { type: 'bubble-hide' });
-      petWin.setBounds({ x: restX, y: restY, width: dims.windowWidth, height: dims.windowHeight });
-      setTimeout(createChatWindow, 200);
+      const current = petWin.getBounds();
+      animateBounds(
+        petWin,
+        current,
+        { x: restX, y: restY, width: dims.windowWidth, height: dims.windowHeight },
+        220,
+        easeInOutQuad,
+        null,
+        createChatWindow
+      );
     } else {
       createChatWindow();
     }
@@ -761,16 +820,45 @@ function registerIpc() {
 
   ipcMain.on('pet:click', () => openChat());
 
-  ipcMain.on('summon:click', () => triggerManualSummon());
-
-  ipcMain.on('summon:drag', (event, { phase, x, y }) => {
+  // Coordinates come from screen.getCursorScreenPoint() (main process),
+  // never from the renderer's MouseEvent.screenX/Y. On Windows, mixed-DPI
+  // multi-monitor setups (e.g. laptop at 150% + external monitor at 100%)
+  // report renderer screenX/Y in the wrong scale once the cursor is on a
+  // different-scaled monitor than the window, which made dragging across
+  // monitors jump to the wrong place or snap back. The main process's
+  // screen module is DPI-consistent across all monitors, so we use it as
+  // the single source of truth for the whole drag gesture.
+  ipcMain.on('summon:drag', (event, { phase }) => {
     if (!summonWin || summonWin.isDestroyed()) return;
+    const cursor = screen.getCursorScreenPoint();
+
+    if (phase === 'start') {
+      const bounds = summonWin.getBounds();
+      summonDragStart = { cursorX: cursor.x, cursorY: cursor.y, winX: bounds.x, winY: bounds.y };
+      return;
+    }
+    if (!summonDragStart) return;
+
+    const dx = cursor.x - summonDragStart.cursorX;
+    const dy = cursor.y - summonDragStart.cursorY;
+    const x = summonDragStart.winX + dx;
+    const y = summonDragStart.winY + dy;
+
     if (phase === 'move') {
       summonWin.setBounds({ x: Math.round(x), y: Math.round(y), width: 56, height: 56 });
     } else if (phase === 'end') {
-      const clamped = clampSummonToScreen(x, y);
-      summonWin.setBounds({ x: clamped.x, y: clamped.y, width: 56, height: 56 });
-      store.save({ summonButtonPos: clamped });
+      const movedDistance = Math.abs(dx) + Math.abs(dy);
+      if (movedDistance < 5) {
+        // Barely moved, treat as a click rather than a drag: snap back to
+        // the exact start position and trigger a summon instead.
+        summonWin.setBounds({ x: summonDragStart.winX, y: summonDragStart.winY, width: 56, height: 56 });
+        triggerManualSummon();
+      } else {
+        const clamped = clampSummonToScreen(x, y);
+        summonWin.setBounds({ x: clamped.x, y: clamped.y, width: 56, height: 56 });
+        store.save({ summonButtonPos: clamped });
+      }
+      summonDragStart = null;
     }
   });
 
@@ -859,7 +947,10 @@ function registerIpc() {
 /** Resets the summon button to a sane default position and brings the pet
  * on screen. Triggered by the "bring pet on screen" recovery launcher. */
 function bringOnScreen() {
-  const wa = workArea();
+  // Use whichever monitor the mouse is on right now, this is a recovery
+  // action so the old saved (possibly off-screen/wrong-monitor) position
+  // must not be trusted.
+  const wa = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
   const size = 56;
   const defaultPos = { x: wa.x + wa.width - size - 24, y: wa.y + wa.height - size - 24 };
   store.save({ summonButtonPos: defaultPos });

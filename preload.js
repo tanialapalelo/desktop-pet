@@ -13,7 +13,6 @@ contextBridge.exposeInMainWorld('api', {
     onCommand: (cb) => ipcRenderer.on('pet:command', (event, cmd) => cb(cmd))
   },
   summon: {
-    click: () => ipcRenderer.send('summon:click'),
     drag: (payload) => ipcRenderer.send('summon:drag', payload),
     onInit: (cb) => ipcRenderer.on('summon:init', (event, data) => cb(data))
   },
