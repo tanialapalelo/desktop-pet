@@ -13,7 +13,7 @@ if %errorlevel% neq 0 (
 )
 
 node -v
-npm -v
+call npm -v
 echo.
 
 if not exist "node_modules" (

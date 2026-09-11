@@ -1,7 +1,7 @@
-// main.js — Electron main process.
+// main.js, the Electron main process.
 // Owns every window, the tray, all scheduling (visits / water / wandering),
 // the walk/bubble animation sequencing, and all IPC. Renderers never talk to
-// each other directly — everything routes through here.
+// each other directly, everything routes through here.
 
 const path = require('path');
 const {
@@ -28,7 +28,7 @@ app.setName('desktop-pet'); // locks the userData folder name regardless of prod
 
 // Only one copy of the pet should ever run. If the user double-clicks the
 // launcher (or the "bring pet on screen" recovery launcher) while it's
-// already running, we don't start a second instance — instead we nudge the
+// already running, we don't start a second instance, instead we nudge the
 // existing one to reset and show itself.
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -49,7 +49,7 @@ const state = {
   animating: false, // true ONLY while the window is actively mid-walk (bounds tweening); false while idle/bubble-showing
   direction: 1, // 1 = facing right, -1 = facing left
   restBounds: null, // current resting {x,y,width,height} of petWin while visible
-  chatPinningPet: false, // true while chat is open — suppresses auto-leave
+  chatPinningPet: false, // true while chat is open, suppresses auto-leave
   pendingLeaveTimer: null,
   bubbleHideTimer: null
 };
@@ -134,7 +134,7 @@ function isPausedNow() {
   const { pause } = store.load();
   if (!pause || !pause.until) return false;
   if (Date.now() >= pause.until) {
-    // expired — clear it
+    // expired, clear it
     store.save({ pause: { mode: null, until: null } });
     refreshTrayMenu();
     return false;
@@ -339,7 +339,7 @@ function runVisit(kind) {
 
 function hideBubbleAndLeave(win, dims, restX, restY) {
   if (!win || win.isDestroyed()) return;
-  if (state.chatPinningPet) return; // chat is open — stay until it closes
+  if (state.chatPinningPet) return; // chat is open, stay until it closes
   win.webContents.send('pet:command', { type: 'bubble-hide' });
   // shrink window back to just the pet before walking off
   win.setBounds({ x: restX, y: restY, width: dims.windowWidth, height: dims.windowHeight });
@@ -406,7 +406,7 @@ function ensurePetVisible(onReady) {
   }
 
   if (state.petVisible) {
-    // Currently mid walk-in/out — wait for it to settle into idle, then proceed.
+    // Currently mid walk-in/out, wait for it to settle into idle, then proceed.
     let attempts = 0;
     const check = setInterval(() => {
       attempts++;
@@ -414,7 +414,7 @@ function ensurePetVisible(onReady) {
         clearInterval(check);
         onReady();
       } else if (attempts > 40) {
-        // It left before we could catch it (rare race) — summon fresh.
+        // It left before we could catch it (rare race), summon fresh.
         clearInterval(check);
         ensurePetVisible(onReady);
       }
@@ -422,7 +422,7 @@ function ensurePetVisible(onReady) {
     return;
   }
 
-  // Not visible at all — summon it manually (bubble still shows; pinning
+  // Not visible at all, summon it manually (bubble still shows; pinning
   // above ensures it won't auto-leave once the bubble timer would fire).
   if (visitTimerHandle) clearTimeout(visitTimerHandle);
   runVisit('manual');
@@ -515,47 +515,60 @@ function openChat() {
     const restX = state.restBounds ? state.restBounds.x : workArea().x + 40;
     const restY = state.restBounds ? state.restBounds.y : workArea().y + workArea().height - 300;
 
-    const chatWidth = 300;
-    const chatHeight = 360;
-    const wa = workArea();
-    const fitsRight = restX + dims.windowWidth + 14 + chatWidth <= wa.x + wa.width;
-    const x = fitsRight ? restX + dims.windowWidth + 14 : Math.max(wa.x, restX - chatWidth - 14);
-    const y = clamp(restY + dims.windowHeight - chatHeight, wa.y, wa.y + wa.height - chatHeight);
+    const createChatWindow = () => {
+      const chatWidth = 300;
+      const chatHeight = 360;
+      const wa = workArea();
+      const fitsRight = restX + dims.windowWidth + 14 + chatWidth <= wa.x + wa.width;
+      const x = fitsRight ? restX + dims.windowWidth + 14 : Math.max(wa.x, restX - chatWidth - 14);
+      const y = clamp(restY + dims.windowHeight - chatHeight, wa.y, wa.y + wa.height - chatHeight);
 
-    chatWin = new BrowserWindow({
-      width: chatWidth,
-      height: chatHeight,
-      x,
-      y,
-      transparent: true,
-      frame: false,
-      resizable: false,
-      alwaysOnTop: true,
-      skipTaskbar: true,
-      hasShadow: true,
-      webPreferences: {
-        preload: path.join(__dirname, 'preload.js'),
-        contextIsolation: true,
-        nodeIntegration: false
-      }
-    });
-    chatWin.setAlwaysOnTop(true, 'screen-saver');
-    chatWin.loadFile(path.join(__dirname, 'renderer', 'chat', 'chat.html'));
-
-    chatWin.webContents.once('did-finish-load', () => {
-      const personality = ai.loadPersonality();
-      chatHistory = [];
-      chatWin.webContents.send('chat:init', {
-        greeting: personality.greetingWhenChatOpens || "Hi! What's up?",
-        aiMode: !!store.load().aiChatEnabled
+      chatWin = new BrowserWindow({
+        width: chatWidth,
+        height: chatHeight,
+        x,
+        y,
+        transparent: true,
+        frame: false,
+        resizable: false,
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        hasShadow: true,
+        webPreferences: {
+          preload: path.join(__dirname, 'preload.js'),
+          contextIsolation: true,
+          nodeIntegration: false
+        }
       });
-    });
+      chatWin.setAlwaysOnTop(true, 'screen-saver');
+      chatWin.loadFile(path.join(__dirname, 'renderer', 'chat', 'chat.html'));
 
-    chatWin.on('closed', () => {
-      chatWin = null;
-      chatHistory = [];
-      unpinPetAfterChat();
-    });
+      chatWin.webContents.once('did-finish-load', () => {
+        const personality = ai.loadPersonality();
+        chatHistory = [];
+        chatWin.webContents.send('chat:init', {
+          greeting: personality.greetingWhenChatOpens || "Hi! What's up?",
+          aiMode: !!store.load().aiChatEnabled
+        });
+      });
+
+      chatWin.on('closed', () => {
+        chatWin = null;
+        chatHistory = [];
+        unpinPetAfterChat();
+      });
+    };
+
+    // The speech bubble may still be showing, which widens the pet window
+    // past its base size. Collapse it back first so the chat window doesn't
+    // open on top of the still-expanded pet/bubble.
+    if (petWin && !petWin.isDestroyed() && state.restBounds) {
+      petWin.webContents.send('pet:command', { type: 'bubble-hide' });
+      petWin.setBounds({ x: restX, y: restY, width: dims.windowWidth, height: dims.windowHeight });
+      setTimeout(createChatWindow, 200);
+    } else {
+      createChatWindow();
+    }
   });
 }
 
@@ -571,7 +584,7 @@ function openSettings() {
   settingsWin = new BrowserWindow({
     width: 460,
     height: 640,
-    title: 'Desktop Pet — Settings',
+    title: 'Desktop Pet - Settings',
     resizable: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -631,10 +644,25 @@ function createTray() {
 
 function triggerManualSummon() {
   if (!store.load().enabled) return;
-  if (state.petVisible) return;
+  if (state.petVisible) {
+    dismissPetNow(); // pet is already out, treat this click as "send it away"
+    return;
+  }
   if (visitTimerHandle) clearTimeout(visitTimerHandle);
   runVisit('manual');
   scheduleNextVisit();
+}
+
+/** Sends the pet away immediately, skipping the rest of its bubble timer. */
+function dismissPetNow() {
+  if (state.chatPinningPet) return; // chat is open, let that flow finish on its own
+  if (!petWin || petWin.isDestroyed() || !state.restBounds || state.animating) return;
+  if (state.bubbleHideTimer) {
+    clearTimeout(state.bubbleHideTimer);
+    state.bubbleHideTimer = null;
+  }
+  const dims = getPetDimensions(store.load().petSize);
+  hideBubbleAndLeave(petWin, dims, state.restBounds.x, state.restBounds.y);
 }
 
 // ---------------------------------------------------------------------------
@@ -700,7 +728,7 @@ function setApiKey(rawKey) {
     const buf = safeStorage.encryptString(rawKey);
     store.save({ apiKeyEncrypted: buf.toString('base64') });
   } else {
-    // Rare fallback (e.g. no OS keychain available) — still better than hardcoding.
+    // Rare fallback (e.g. no OS keychain available), still better than hardcoding.
     store.save({ apiKeyEncrypted: Buffer.from(rawKey, 'utf-8').toString('base64') });
   }
 }
@@ -869,7 +897,7 @@ if (gotLock) {
   });
 
   app.on('window-all-closed', (event) => {
-    // This app lives in the tray — never quit just because a window closed.
+    // This app lives in the tray, never quit just because a window closed.
     event.preventDefault?.();
   });
 
