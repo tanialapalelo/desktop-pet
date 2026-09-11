@@ -47,7 +47,7 @@ html, body {
   pointer-events: none;
 }
 
-/* Blink overlay — two small skin-tone ellipses placed over the eyes.
+/* Blink overlay: two small skin-tone ellipses placed over the eyes.
    Coordinates were sampled from the actual sprite (see build notes in README). */
 .eye-blink {
   position: absolute;

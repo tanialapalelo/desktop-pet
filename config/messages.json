@@ -28,7 +28,7 @@
       "Break time?"
     ],
     "mood": [
-      "Hi, checking in — okay?",
+      "Hi, checking in, okay?",
       "How's it going over there?",
       "Mood check!",
       "All good?"
@@ -58,7 +58,7 @@
       "greeting": ["Hi there! Good to see you.", "Hey! I'm here.", "Hello! What's up?"],
       "niceToMeet": ["Nice to meet you too! I'm happy to be your desk buddy.", "Likewise! I'll be around if you need me."],
       "howAreYou": ["I'm just a tiny pixel, but doing great! How about you?", "Living my best pixelated life. You?"],
-      "tired": ["Aw. Maybe a short break would help — I'll be right here.", "Sounds like it's time to rest your eyes for a bit."],
+      "tired": ["Aw. Maybe a short break would help, I'll be right here.", "Sounds like it's time to rest your eyes for a bit."],
       "water": ["Good call, go grab some water. I'll wait!", "Hydration first! Go on, I'm not going anywhere."],
       "stressed": ["Take a slow breath with me for a sec. You've got this.", "That sounds heavy. One small step at a time, okay?"],
       "bye": ["Bye for now! I'll be right here if you need me.", "See you soon!"],

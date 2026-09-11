@@ -1,6 +1,6 @@
 // preload.js
 // Runs in an isolated context before each renderer loads. Exposes a small,
-// explicit API on window.api — renderers never get direct access to
+// explicit API on window.api, renderers never get direct access to
 // ipcRenderer, Node, or the filesystem.
 
 const { contextBridge, ipcRenderer } = require('electron');

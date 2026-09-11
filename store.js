@@ -2,7 +2,7 @@
 // A tiny, dependency-free persistent JSON store.
 // Everything the app needs to remember between launches lives here:
 // settings, reminder timing, pet size, summon button position, quiet hours, etc.
-// (Conversation history is intentionally NOT stored here — it only lives in memory
+// (Conversation history is intentionally NOT stored here, it only lives in memory
 // while the chat window is open, per the app spec.)
 
 const fs = require('fs');
@@ -23,7 +23,7 @@ const DEFAULTS = {
   petSize: 'medium', // small | medium | large
 
   aiChatEnabled: false, // AI mode toggle (requires API key)
-  apiKeyEncrypted: null, // base64 string, encrypted via Electron safeStorage — never plaintext
+  apiKeyEncrypted: null, // base64 string, encrypted via Electron safeStorage, never plaintext
 
   launchAtStartup: false,
   alwaysOnTop: true,
@@ -34,7 +34,7 @@ const DEFAULTS = {
     end: '08:00'
   },
 
-  summonButtonPos: null, // { x, y } — persisted, clamped to visible screen on load
+  summonButtonPos: null, // { x, y }, persisted, clamped to visible screen on load
   petLastX: null, // last resting X position, so it doesn't always appear in the same spot
 
   pause: {
