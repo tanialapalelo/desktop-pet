@@ -99,7 +99,7 @@ disk in plain text or committed anywhere in config.
 
 **Packaging.** Configured with `electron-builder` to produce a Windows
 NSIS installer and a portable .exe (plus a .dmg/AppImage on other
-platforms) directly from `npm run dist:win`.
+platforms) directly from `pnpm run dist:win`.
 
 ## Quick start
 
@@ -180,8 +180,8 @@ No Node.js, no terminal, no `launch.bat`, just a normal
 double-click-to-run app:
 
 ```
-npm install
-npm run dist:win
+pnpm install
+pnpm run dist:win
 ```
 
 Look in the generated `dist/` folder for:
@@ -190,7 +190,11 @@ Look in the generated `dist/` folder for:
   Menu/Desktop shortcut that installs to `%LOCALAPPDATA%`.
 - `Desktop Pet 1.0.0.exe`, a portable single file with no install step.
 
-`npm run dist` builds a .dmg or AppImage on Mac/Linux the same way.
+`pnpm run dist` builds a .dmg or AppImage on Mac/Linux the same way.
+
+This project uses [pnpm](https://pnpm.io) (not npm) for dependency
+management; install it once with `npm install -g pnpm` or `corepack
+enable` if you don't have it yet.
 
 ## Customization
 

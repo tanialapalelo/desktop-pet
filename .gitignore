@@ -5,3 +5,9 @@ build/
 Thumbs.db
 *.log
 asset_options/
+.idea/
+
+# pnpm is the project's package manager (pnpm-lock.yaml); launch.bat/
+# launch.command still use npm for end users without pnpm installed,
+# which would regenerate this file locally
+package-lock.json

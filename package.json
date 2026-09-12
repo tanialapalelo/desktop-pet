@@ -9,13 +9,16 @@
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
-    "postinstall": "node -e \"console.log('\\n✔ Setup complete. Run npm start (or double-click the launcher) to open your pet.\\n')\"",
+    "postinstall": "node -e \"console.log('\\n✔ Setup complete. Run pnpm start (or double-click the launcher) to open your pet.\\n')\"",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win"
   },
   "devDependencies": {
     "electron": "^33.2.0",
     "electron-builder": "^25.1.8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron"]
   },
   "build": {
     "appId": "com.desktoppet.app",
