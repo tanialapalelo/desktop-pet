@@ -32,6 +32,16 @@ html, body {
   pointer-events: auto;
 }
 
+/* When the bubble needs to open on the left, main.js grows the window by
+   shifting its x leftward (not by growing rightward), so the window's right
+   edge stays put. Pin the figure to that same right edge here, otherwise it
+   stays glued to the window's left edge and visibly jumps sideways by the
+   bubble's width every time it opens/closes. */
+.side-left #pet-figure {
+  left: auto;
+  right: 0;
+}
+
 #sprite {
   width: 100%;
   height: 100%;
@@ -43,21 +53,24 @@ html, body {
   pointer-events: none;
 }
 
-/* Blink overlay: two small skin-tone ellipses placed over the eyes.
-   Coordinates sampled from assets/sprites/cat/idle.png (see
-   scripts/extract_cat_sprites.py for how that canvas is built). */
+/* Blink overlay: two small fur-tone ellipses placed over the eyes so a
+   "blink" is just this flashing in over the sprite's own drawn-in eyes.
+   Coordinates sampled directly off assets/sprites/cat/idle.png's pupil
+   positions (measured against its 662x844 canvas), and the fill matches
+   that PNG's body/fur color. Tuned for the sitting poses; the lying-down
+   "stretch" pose isn't a perfect match since its eyes sit lower/wider. */
 .eye-blink {
   position: absolute;
-  top: 35%;
-  height: 8%;
+  top: 40%;
+  height: 12%;
   border-radius: 50%;
-  background: #fff;
+  background: #fff8f0;
   opacity: 0;
   pointer-events: none;
   transform: scaleX(var(--dir, 1));
 }
-#eye-left { left: 32%; width: 9%; }
-#eye-right { left: 59%; width: 9%; }
+#eye-left { left: 24%; width: 14%; }
+#eye-right { left: 60%; width: 14%; }
 
 .eye-blink.blinking {
   animation: blinkFlash 0.16s ease-in-out;

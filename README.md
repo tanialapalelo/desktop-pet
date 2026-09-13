@@ -1,6 +1,6 @@
 # Desktop Pet
 
-A tiny animated pixel-art companion that lives on top of your screen. It
+A tiny animated companion that lives on top of your screen. It
 walks on-screen every few minutes to check in on you, reminds you to drink
 water, wanders around when it feels like it, and can chat with you (offline
 by default, or with a real LLM behind an OpenAI key). Everything runs
@@ -8,24 +8,36 @@ locally on your own machine: no server, no telemetry, no account.
 
 <p align="center">
   <img src="assets/sprites/cat/idle.png" alt="Desktop Pet character" width="160" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="assets/icons/summon-icon.png" alt="Summon button icon" width="64" />
 </p>
+<p align="center"><sub>The pet itself, and the round summon button (bottom-right of your screen by default) that brings it out or sends it away.</sub></p>
 
 Add a GIF or screenshot of the pet walking on screen and the chat bubble
 here before sharing this repo. It's the single best thing to lead with.
+
+### How it flows, at a glance
+
+```mermaid
+flowchart LR
+    A["Hidden<br/>(zero CPU)"] -->|"timer OR<br/>summon button/tray"| B["Walks on screen<br/>+ speech bubble"]
+    B -->|"~10-30s pass"| A
+    B -->|"click the pet"| C["Chat window"]
+    C -->|"close chat"| A
+```
 
 ---
 
 ## Table of contents
 
 - [Features](#features)
-- [Technical highlights](#technical-highlights)
 - [Quick start](#quick-start)
 - [Using it](#using-it)
+- [Study goal (pomodoro)](#study-goal-pomodoro)
 - [Chat modes](#chat-modes)
-- [Packaging it as a standalone .exe/.app](#packaging-it-as-a-standalone-exeapp)
-- [Customization](#customization)
-- [Project structure](#project-structure)
+- [Installing and uninstalling](#installing-and-uninstalling)
 - [Troubleshooting](#troubleshooting)
+- [For developers](#for-developers) (technical highlights, packaging, customization, project structure)
 
 ---
 
@@ -35,6 +47,9 @@ here before sharing this repo. It's the single best thing to lead with.
   friendly line in a speech bubble, then walks back off. Frequency,
   check-ins, and quiet hours are all configurable.
 - **Water/break reminders** on their own independent timer.
+- **Study goal (pomodoro).** Set a goal duration split into work/break
+  intervals; the pet nags you if your focused app matches a distraction
+  keyword during a work interval. [Details below](#study-goal-pomodoro).
 - **Idle wandering.** Occasionally pops out just to fidget around and
   leave, no message, just personality.
 - **Chat.** Click the character to open a small chat window beside it.
@@ -56,50 +71,6 @@ here before sharing this repo. It's the single best thing to lead with.
   and every line the pet can say are all editable JSON/settings.
 - **Packageable into a single .exe/.app.** No Node.js or terminal
   required for the person actually using it.
-
-## Technical highlights
-
-A few things that were the most interesting to build, if you're reading
-this as a fellow dev.
-
-**Frameless, transparent, click-through windows.** The pet lives in a
-borderless, fully transparent `BrowserWindow` sized just around the
-sprite. `setIgnoreMouseEvents()` is toggled on and off live based on
-whether the cursor is actually over the opaque character, so the desktop
-underneath stays fully clickable everywhere else.
-
-**Window-bounds animation synced with CSS transitions.** Native OS
-windows can't be animated with CSS, so walking/entering/leaving is driven
-by a small hand-rolled tween loop in the main process (`animateBounds()`
-in [main.js](main.js): easing plus `setBounds()` on a roughly 60fps
-timer). Where the renderer also animates something with CSS (the speech
-bubble fading in and out), the window-bounds tween is timed to match that
-transition's duration and easing. Otherwise the two visibly fight each
-other and the character appears to jump.
-
-**Multi-monitor and mixed-DPI correctness.** Electron's `screen` module
-gives DPI-consistent coordinates across all monitors, but a renderer's
-`MouseEvent.screenX/Y` does not once dragging crosses onto a
-differently-scaled monitor (a common Windows laptop plus external
-monitor setup). Dragging the summon button is resolved entirely in the
-main process using `screen.getCursorScreenPoint()` as the single source
-of truth. The renderer only ever reports mouse-down/move/up phases.
-Scheduled visits pick whichever monitor the cursor is currently on, so
-the pet always shows up where you're actually looking.
-
-**Offline-first chat with graceful AI fallback.** Chat defaults to a
-small local reply engine, no network and no key needed. Turning on AI
-mode calls OpenAI, and any failure (no internet, invalid key, rate limit)
-transparently falls back to the offline engine for that message instead
-of showing an error. The chat just never breaks.
-
-**Secrets handled properly.** The OpenAI API key is encrypted with
-Electron's `safeStorage` (backed by the OS keychain), never written to
-disk in plain text or committed anywhere in config.
-
-**Packaging.** Configured with `electron-builder` to produce a Windows
-NSIS installer and a portable .exe (plus a .dmg/AppImage on other
-platforms) directly from `pnpm run dist:win`.
 
 ## Quick start
 
@@ -140,7 +111,8 @@ the background.
   Manual summon still works while paused.
 - Settings covers visit/water frequency, check-ins, sound, animation
   speed, pet size, AI chat and API key, launch-at-startup, always-on-top,
-  and quiet hours.
+  the floating summon button (can be turned off if it's in the way; the
+  tray menu's "Summon Pet" always works either way), and quiet hours.
 
 ### If the pet or summon button ever disappears off-screen
 
@@ -153,6 +125,28 @@ It snaps the summon button back into view (on whichever monitor your
 mouse is on) and brings the pet out. If the app is already running, it
 just pops back into view instead of opening a second copy, since it's
 single-instance locked.
+
+## Study goal (pomodoro)
+
+In **Settings → Study goal**: set a total goal duration split into
+work/break intervals. While a work interval is running, the pet checks
+your focused app/window every few seconds, and pops up to nag you if it
+matches one of your **distraction keywords** (e.g. `youtube, netflix,
+discord`).
+
+```mermaid
+flowchart TD
+    S["Start session<br/>(e.g. goal 60m, work 25m, break 5m)"] --> W1["WORK 25m"]
+    W1 -->|"focused app matches<br/>a distraction keyword"| Nag["Pet pops up to nag you<br/>(checked every few sec, cooldown between nags)"]
+    Nag --> W1
+    W1 -->|"25m up"| B1["BREAK 5m"]
+    B1 -->|"5m up"| W2["WORK 25m"]
+    W2 -->|"..."| Done["Goal duration reached<br/>pet says 'Goal reached!'"]
+```
+
+> **Mac note:** matching a browser tab's title (so it can catch "tiktok"
+> or "netflix" open in a browser, not just the native app) needs the
+> Automation permission described in [Troubleshooting](#troubleshooting).
 
 ## Chat modes
 
@@ -174,7 +168,95 @@ The pet's personality and system prompt live in
 offline chat replies live in [config/messages.json](config/messages.json).
 Edit either and restart the app to see the change, no coding required.
 
-## Packaging it as a standalone .exe/.app
+## Installing and uninstalling
+
+Already-built installers live in the `dist/` folder after running
+`pnpm run dist` (see [For developers](#for-developers) if you need to
+build them yourself).
+
+### Windows
+
+- **`Desktop Pet Setup 1.0.0.exe`** — double-click, follow the installer
+  (you can pick the install folder), then launch from the Start Menu or
+  the Desktop shortcut it creates.
+- **`Desktop Pet 1.0.0.exe`** (portable) — no installer, just double-click
+  it directly (works fine from a USB stick too).
+
+To uninstall: if you used the Setup installer, go to **Settings → Apps →
+Desktop Pet → Uninstall** (or Control Panel → Programs and Features). If
+you used the portable `.exe`, just delete that file, nothing else was
+installed.
+
+### Mac
+
+1. Double-click the generated **`Desktop Pet-1.0.0-arm64.dmg`** (or
+   `-x64.dmg` on an Intel Mac).
+2. A Finder window opens showing the app icon and an Applications shortcut,
+   drag the app onto **Applications**.
+3. First launch: since this build isn't signed with a paid Apple Developer
+   certificate, Gatekeeper will likely block it ("Desktop Pet is damaged"
+   or "unidentified developer"). Right-click the app in Applications →
+   **Open** → **Open** again in the dialog, or go to **System Settings →
+   Privacy & Security** and click **Open Anyway** next to the warning.
+
+To uninstall: quit the app first (tray icon → Quit), then open
+**Applications**, find **Desktop Pet**, and drag it to the Trash (or
+right-click → Move to Trash) — there's no separate uninstaller. If you
+also want to remove its saved settings/study-goal config, delete
+`~/Library/Application Support/desktop-pet` as well.
+
+### Linux
+
+- `chmod +x "Desktop Pet-1.0.0.AppImage"` once, then double-click or run
+  it directly. No install step.
+- To uninstall, just delete that file (and `~/.config/desktop-pet` if you
+  want to remove saved settings too).
+
+## Troubleshooting
+
+- **"node" is not recognized / command not found.** Node.js isn't
+  installed, or you need to restart your computer after installing it.
+- **npm install fails.** Check your internet connection, and delete
+  `node_modules` and retry if it gets stuck partway.
+- **Pet or button missing.** Use `bring-pet-on-screen.bat`/`.command`.
+- **Nothing happens double-clicking on Mac.** Right-click the file and
+  choose Open the first time, to get past Gatekeeper's warning.
+- **Study goal distraction check does nothing on Mac.** It needs
+  permission to read the frontmost app/window title via System Events.
+  The first check should trigger a macOS prompt asking to let Desktop Pet
+  control "System Events" — click OK. If you dismissed it, or it never
+  showed, grant it manually in **System Settings → Privacy & Security →
+  Automation → Desktop Pet → System Events**. Without this permission,
+  keyword matches still work against native apps' process names (e.g.
+  Discord, Steam), just not against a browser tab's title (e.g. catching
+  "tiktok" or "netflix" open in a browser).
+
+## For developers
+
+<details>
+<summary>Technical highlights</summary>
+
+- **Frameless, transparent, click-through windows** — a borderless
+  `BrowserWindow` sized to the sprite, with `setIgnoreMouseEvents()`
+  toggled live so the desktop underneath stays clickable everywhere else.
+- **Window-bounds animation synced with CSS** — OS windows can't be
+  animated with CSS, so walk/enter/leave is a hand-rolled tween loop
+  (`animateBounds()` in [main.js](main.js)) timed to match the renderer's
+  CSS transitions (e.g. the bubble fade), otherwise the two visibly fight.
+- **Multi-monitor / mixed-DPI correct** — dragging the summon button and
+  placing visits both resolve against `screen.getCursorScreenPoint()` /
+  the focused window's monitor in the main process, since a renderer's
+  `MouseEvent.screenX/Y` breaks across differently-scaled monitors.
+- **Offline-first chat** — a local reply engine by default; AI mode calls
+  OpenAI and transparently falls back to offline replies on any failure.
+- **Secrets handled properly** — the OpenAI API key is encrypted with
+  Electron's `safeStorage` (OS keychain-backed), never written to disk in
+  plain text.
+
+</details>
+
+<details>
+<summary>Packaging it yourself</summary>
 
 No Node.js, no terminal, no `launch.bat`, just a normal
 double-click-to-run app:
@@ -190,37 +272,43 @@ Look in the generated `dist/` folder for:
   Menu/Desktop shortcut that installs to `%LOCALAPPDATA%`.
 - `Desktop Pet 1.0.0.exe`, a portable single file with no install step.
 
-`pnpm run dist` builds a .dmg or AppImage on Mac/Linux the same way.
+`pnpm run dist` builds a .dmg or AppImage on Mac/Linux the same way. This
+project uses [pnpm](https://pnpm.io) (not npm); install it once with
+`npm install -g pnpm` or `corepack enable` if you don't have it yet.
 
-This project uses [pnpm](https://pnpm.io) (not npm) for dependency
-management; install it once with `npm install -g pnpm` or `corepack
-enable` if you don't have it yet.
+</details>
 
-## Customization
+<details>
+<summary>Customization</summary>
 
-**Swap the character art.** The pet has one expression sprite per mood in
-`assets/sprites/cat/` (see the `MOOD_SPRITES` map in `main.js`), all
-cropped to the same canvas size so switching expression never changes
-the window's aspect ratio. Replace any of those files (keep the same
-filenames) or run `scripts/extract_cat_sprites.py` again against a new
-source image to regenerate the whole set. All current animation (bob,
-squash, walk bounce, blink, flip) is pure CSS/JS driven off whichever
-image is currently loaded.
+**Swap the character art.** One expression/pose sprite per mood in
+`assets/sprites/cat/*.png` (see the `MOOD_SPRITES` map in `main.js`), each
+cropped onto the same 331:422 canvas (see `SPRITE_ASPECT` in
+[lib/petSizes.js](lib/petSizes.js)) so switching mood never changes the
+window's aspect ratio. The art is original, self-generated artwork (not
+stock or third-party assets), cut from a single sprite sheet and
+background-removed with a small Python script. To swap it: replace the
+`.png` files directly (keep the same filenames and aspect ratio). The
+tray/summon/app icons are then regenerated from `greeting.png` by
+[scripts/generate_icons.py](scripts/generate_icons.py) (`python3
+scripts/generate_icons.py`, requires Pillow: `pip install pillow`).
 
-**Move to a real sprite sheet or frame-by-frame animation later.** The
-animation logic is centralized in [renderer/pet/pet.js](renderer/pet/pet.js)
-(the state machine for walk/idle/bubble commands),
-[renderer/pet/pet.css](renderer/pet/pet.css) (the current CSS
-transforms), and [lib/petSizes.js](lib/petSizes.js) (sizing math shared
-between the main process and CSS). Swapping the `<img id="sprite">` for
-an animated component is the natural next step, and everything else
-keeps working unchanged.
+**Move to a real sprite sheet or frame-by-frame animation later.**
+Animation logic is centralized in [renderer/pet/pet.js](renderer/pet/pet.js)
+(walk/idle/bubble state machine), [renderer/pet/pet.css](renderer/pet/pet.css)
+(CSS transforms), and [lib/petSizes.js](lib/petSizes.js) (sizing shared
+between main process and CSS). Swapping `<img id="sprite">` for an
+animated component is the natural next step.
 
 **Change what it says or how it talks.**
 [config/messages.json](config/messages.json) and
-[config/personality.json](config/personality.json), see above.
+[config/personality.json](config/personality.json) — edit and restart
+the app, no coding required.
 
-## Project structure
+</details>
+
+<details>
+<summary>Project structure</summary>
 
 ```
 desktop-pet/
@@ -230,6 +318,8 @@ desktop-pet/
   lib/
     basicChat.js             Offline chat reply engine
     ai.js                     OpenAI API call for AI chat mode
+    activeWindow.js           Foreground app/window lookup (Windows + macOS)
+    studySession.js           Pomodoro work/break state machine
     petSizes.js               Shared sizing constants
   config/
     personality.json          Editable AI personality/system prompt
@@ -240,37 +330,27 @@ desktop-pet/
     chat/                      The compact chat window
     settings/                  The settings screen
   assets/
-    sprites/cat/*.png            Pet artwork, one expression per mood (background removed)
+    sprites/cat/*.png            Cat mascot art, one expression/pose per mood
     icons/                      Tray / summon button / app icons
     sounds/chime.wav             Small notification chime
+  scripts/
+    generate_icons.py               Regenerates every tray/app icon from greeting.png (needs Pillow)
   launch.bat / launch.command                   Everyday launcher
   bring-pet-on-screen.bat / .command             Recovery launcher
 ```
 
-### How it behaves under the hood
+**How it behaves under the hood:**
 
-- The pet window is transparent and frameless. Only the character (and
-  briefly its speech bubble) is ever visible; there's no rectangular app
-  window.
-- It's click-through outside the character, so it never blocks clicks to
-  the desktop or other apps.
-- It's hidden entirely, not just invisible, whenever it's not actively
-  visiting, which keeps background CPU usage effectively zero.
-- Settings, reminder timing, pet size, summon button position, and quiet
-  hours are saved locally in your OS's standard app data folder. Chat
+- The pet window is transparent and frameless; only the character (and
+  briefly its speech bubble) is ever visible, no rectangular app window.
+- It's hidden entirely (not just invisible) whenever it's not actively
+  visiting, keeping background CPU usage effectively zero.
+- Settings are saved locally in your OS's standard app data folder. Chat
   history is intentionally not saved; it resets each time you reopen the
   chat window.
 
-## Troubleshooting
-
-- **"node" is not recognized / command not found.** Node.js isn't
-  installed, or you need to restart your computer after installing it.
-- **npm install fails.** Check your internet connection, and delete
-  `node_modules` and retry if it gets stuck partway.
-- **Pet or button missing.** Use `bring-pet-on-screen.bat`/`.command`.
-- **Nothing happens double-clicking on Mac.** Right-click the file and
-  choose Open the first time, to get past Gatekeeper's warning.
+</details>
 
 ---
 
-Built with Electron. Personal project, contributions and forks welcome.
+Built with Electron. Personal project, contributions and forks are welcome. ❤️

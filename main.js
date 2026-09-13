@@ -26,8 +26,8 @@ const ASSETS = path.join(__dirname, 'assets');
 const CAT_SPRITES_DIR = path.join(ASSETS, 'sprites', 'cat');
 const CHIME_PATH = path.join(ASSETS, 'sounds', 'chime.wav');
 
-// One expression per visit "kind"/message category, all cropped to the same
-// canvas size (see scripts/extract_cat_sprites.py) so switching between them
+// One expression per visit "kind"/message category, all exported on the same
+// 331:422 canvas (see lib/petSizes.js SPRITE_ASPECT) so switching between them
 // never changes the pet window's aspect ratio.
 const MOOD_SPRITES = {
   idle: 'idle.png',
@@ -358,9 +358,15 @@ async function runVisit(kind) {
   );
   const startX = enterFromLeft ? wa.x - dims.windowWidth - 20 : wa.x + wa.width + 20;
 
-  const showBubble = kind !== 'wander';
+  // 'chat' is a visit triggered purely to bring the pet on screen before
+  // opening the chat window (see ensurePetVisible/openChat) — it should walk
+  // in silently and go straight to chat, not flash a random bubble message
+  // that gets torn down again a moment later.
+  const showBubble = kind !== 'wander' && kind !== 'chat';
   const directCategories = ['water', 'stretch', 'distraction', 'breakTime', 'backToWork', 'goalComplete'];
-  const category = kind === 'wander' ? 'wander' : (directCategories.includes(kind) ? kind : weightedRandomCategory());
+  const category = kind === 'wander' ? 'wander'
+    : kind === 'chat' ? 'greeting'
+    : (directCategories.includes(kind) ? kind : weightedRandomCategory());
 
   win.setBounds({ x: startX, y: restY, width: dims.windowWidth, height: dims.windowHeight });
   sendPetInit(category);
@@ -514,10 +520,10 @@ function ensurePetVisible(onReady) {
     return;
   }
 
-  // Not visible at all, summon it manually (bubble still shows; pinning
-  // above ensures it won't auto-leave once the bubble timer would fire).
+  // Not visible at all, summon it silently for chat (no bubble; pinning
+  // above ensures it won't auto-leave before the chat window opens).
   if (visitTimerHandle) clearTimeout(visitTimerHandle);
-  runVisit('manual');
+  runVisit('chat');
   scheduleNextVisit();
   let attempts = 0;
   const check = setInterval(() => {
@@ -677,9 +683,13 @@ function openChat() {
     // past its base size. Collapse it back first so the chat window doesn't
     // open on top of the still-expanded pet/bubble. Animated (rather than an
     // instant setBounds) so the character doesn't visibly hop sideways.
-    if (petWin && !petWin.isDestroyed() && state.restBounds) {
+    // Skip this entirely when there's no bubble to collapse (e.g. the pet was
+    // just summoned silently for chat), so chat opens immediately instead of
+    // waiting on a 220ms no-op animation.
+    const current = petWin && !petWin.isDestroyed() ? petWin.getBounds() : null;
+    const alreadyAtRestSize = current && current.width === dims.windowWidth && current.height === dims.windowHeight;
+    if (petWin && !petWin.isDestroyed() && state.restBounds && !alreadyAtRestSize) {
       petWin.webContents.send('pet:command', { type: 'bubble-hide' });
-      const current = petWin.getBounds();
       animateBounds(
         petWin,
         current,
@@ -858,8 +868,8 @@ function scheduleNextWander() {
 
 let distractionCheckHandle = null;
 let lastDistractionNagAt = 0;
-const DISTRACTION_CHECK_MS = 20000;
-const DISTRACTION_NAG_COOLDOWN_MS = 3 * 60 * 1000;
+const DISTRACTION_CHECK_MS = 5000;
+const DISTRACTION_NAG_COOLDOWN_MS = 30 * 1000;
 
 function startStudySession(overrides) {
   const settings = store.load();
@@ -1060,6 +1070,13 @@ function registerIpc() {
     if (Object.prototype.hasOwnProperty.call(partial, 'alwaysOnTop') && petWin && !petWin.isDestroyed()) {
       petWin.setAlwaysOnTop(!!partial.alwaysOnTop, 'screen-saver');
     }
+    if (Object.prototype.hasOwnProperty.call(partial, 'showSummonButton')) {
+      if (partial.showSummonButton) {
+        ensureSummonWindow();
+      } else if (summonWin && !summonWin.isDestroyed()) {
+        summonWin.close();
+      }
+    }
     if (Object.prototype.hasOwnProperty.call(partial, 'enabled')) {
       refreshTrayMenu();
     }
@@ -1117,11 +1134,13 @@ function bringOnScreen() {
   const defaultPos = { x: wa.x + wa.width - size - 24, y: wa.y + wa.height - size - 24 };
   store.save({ summonButtonPos: defaultPos });
 
-  if (summonWin && !summonWin.isDestroyed()) {
-    summonWin.setBounds({ x: defaultPos.x, y: defaultPos.y, width: size, height: size });
-    summonWin.showInactive();
-  } else {
-    ensureSummonWindow();
+  if (store.load().showSummonButton !== false) {
+    if (summonWin && !summonWin.isDestroyed()) {
+      summonWin.setBounds({ x: defaultPos.x, y: defaultPos.y, width: size, height: size });
+      summonWin.showInactive();
+    } else {
+      ensureSummonWindow();
+    }
   }
 
   triggerManualSummon();
@@ -1133,7 +1152,7 @@ if (gotLock) {
 
     registerIpc();
     createTray();
-    ensureSummonWindow();
+    if (store.load().showSummonButton !== false) ensureSummonWindow();
     ensurePetWindow();
     activeWindow.warmUp();
 
