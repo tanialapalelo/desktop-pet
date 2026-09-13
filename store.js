@@ -30,6 +30,7 @@ const DEFAULTS = {
 
   launchAtStartup: false,
   alwaysOnTop: true,
+  showSummonButton: true, // floating draggable summon button; tray "Summon Pet" always works regardless
 
   quietHours: {
     enabled: false,

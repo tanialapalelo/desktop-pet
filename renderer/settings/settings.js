@@ -45,6 +45,7 @@ function populate(settings) {
 
   el('launchAtStartup').checked = !!settings.launchAtStartup;
   el('alwaysOnTop').checked = !!settings.alwaysOnTop;
+  el('showSummonButton').checked = settings.showSummonButton !== false;
 
   const studyGoal = settings.studyGoal || {};
   el('studyTotalMinutes').value = studyGoal.totalMinutes || 120;
@@ -137,6 +138,7 @@ el('quietHoursEnd').addEventListener('change', (e) => {
 
 el('launchAtStartup').addEventListener('change', (e) => save({ launchAtStartup: e.target.checked }));
 el('alwaysOnTop').addEventListener('change', (e) => save({ alwaysOnTop: e.target.checked }));
+el('showSummonButton').addEventListener('change', (e) => save({ showSummonButton: e.target.checked }));
 
 function currentStudyGoalConfig() {
   return {

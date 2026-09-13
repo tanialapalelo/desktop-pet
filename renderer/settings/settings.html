@@ -153,6 +153,9 @@
         <textarea id="studyDistractionKeywords" rows="2" placeholder="youtube, netflix, discord" style="flex:1; margin-left:12px; resize:vertical;"></textarea>
       </label>
       <p class="hint">Comma-separated, matched against the focused app's process name/window title.</p>
+      <p class="hint">On Mac, the first time this runs macOS will ask to let Desktop Pet control
+        "System Events" &mdash; click OK. If you missed it, enable it manually in
+        System Settings &rarr; Privacy &amp; Security &rarr; Automation &rarr; Desktop Pet &rarr; System Events.</p>
       <div class="inline" style="margin-top:6px; justify-content:space-between;">
         <span id="studyStatus" class="hint">No session running.</span>
         <div class="inline" style="gap:8px;">
@@ -172,6 +175,11 @@
         <span>Always on top</span>
         <input type="checkbox" id="alwaysOnTop" />
       </label>
+      <label class="row">
+        <span>Floating summon button</span>
+        <input type="checkbox" id="showSummonButton" />
+      </label>
+      <p class="hint">The draggable round button that's always on screen. Turn this off if it gets in the way — you can still summon the pet anytime from the tray icon menu.</p>
     </section>
 
     <div id="savedToast" class="hidden">Saved ✓</div>
