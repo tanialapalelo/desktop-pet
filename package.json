@@ -5,8 +5,16 @@
   "description": "A tiny animated desktop companion that lives on your screen.",
   "main": "main.js",
   "private": true,
-  "author": "You",
-  "license": "UNLICENSED",
+  "author": "Tania Lapalelo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tanialapalelo/desktop-pet.git"
+  },
+  "homepage": "https://github.com/tanialapalelo/desktop-pet",
+  "bugs": {
+    "url": "https://github.com/tanialapalelo/desktop-pet/issues"
+  },
   "scripts": {
     "start": "electron .",
     "postinstall": "node -e \"console.log('\\n✔ Setup complete. Run pnpm start (or double-click the launcher) to open your pet.\\n')\"",
